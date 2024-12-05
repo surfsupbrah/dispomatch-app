@@ -7,7 +7,7 @@ interface AuthContextType {
   auth: AuthState;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateFacility: (facility: Facility) => Promise<void>;
   addFacility: (facility: Facility) => Promise<void>;
   deleteFacility: (facilityId: string) => Promise<void>;
@@ -25,7 +25,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load facilities when authenticated
   useEffect(() => {
     async function loadFacilities() {
       if (auth.isAuthenticated) {
@@ -33,8 +32,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const facilities = await getFacilities();
           setAuth(prev => ({ ...prev, facilities }));
         } catch (err) {
-          setError('Failed to load facilities');
           console.error('Error loading facilities:', err);
+          setError('Failed to load facilities');
         }
       }
     }
@@ -42,30 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadFacilities();
   }, [auth.isAuthenticated]);
 
-  // Check for existing session on mount
   useEffect(() => {
-    async function checkSession() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setAuth(prev => ({
-          ...prev,
-          isAuthenticated: !!session,
-        }));
-      } catch (err) {
-        console.error('Error checking session:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    checkSession();
-
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuth(prev => ({
         ...prev,
         isAuthenticated: !!session,
       }));
+      setLoading(false);
     });
 
     return () => {
@@ -80,9 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
       });
-
       if (error) throw error;
     } catch (err) {
+      console.error('Signup error:', err);
       setError('Failed to create account');
       throw err;
     }
@@ -95,9 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
       });
-
       if (error) throw error;
     } catch (err) {
+      console.error('Login error:', err);
       setError('Invalid email or password');
       throw err;
     }
@@ -108,14 +90,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
       setAuth({
         isAuthenticated: false,
         facilities: [],
       });
     } catch (err) {
+      console.error('Logout error:', err);
       setError('Failed to log out');
-      console.error('Error logging out:', err);
+      throw err;
     }
   };
 
@@ -128,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         facilities: [...prev.facilities, facility],
       }));
     } catch (err) {
+      console.error('Add facility error:', err);
       setError('Failed to add facility');
       throw err;
     }
@@ -144,6 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ),
       }));
     } catch (err) {
+      console.error('Update facility error:', err);
       setError('Failed to update facility');
       throw err;
     }
@@ -158,18 +142,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         facilities: prev.facilities.filter(f => f.id !== facilityId),
       }));
     } catch (err) {
+      console.error('Delete facility error:', err);
       setError('Failed to delete facility');
       throw err;
     }
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
 
   return (
     <AuthContext.Provider 
