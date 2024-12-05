@@ -3,7 +3,6 @@ import { Routes, Route } from 'react-router-dom';
 import { Header } from './components/Header';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
-import { SignupPage } from './pages/SignupPage';
 import { FacilityPage } from './pages/FacilityPage';
 import { FacilityDashboard } from './pages/FacilityDashboard';
 import { SearchResultsPage } from './pages/SearchResultsPage';
@@ -16,7 +15,6 @@ export function AppRoutes() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
         <Route path="/search" element={<SearchResultsPage />} />
         <Route
           path="/dashboard"

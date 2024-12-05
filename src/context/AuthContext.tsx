@@ -7,7 +7,6 @@ import type { AuthState, Facility } from '../types';
 interface AuthContextType {
   auth: AuthState;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateFacility: (facility: Facility) => Promise<void>;
   addFacility: (facility: Facility) => Promise<void>;
@@ -65,33 +64,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [navigate]);
 
   const clearError = () => setError(null);
-
-  const signup = async (email: string, password: string) => {
-    setError(null);
-    try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        }
-      });
-
-      if (signUpError) {
-        throw new Error(signUpError.message);
-      }
-
-      if (!data.user || !data.session) {
-        throw new Error('Failed to create account');
-      }
-
-      navigate('/dashboard');
-    } catch (err) {
-      console.error('Signup error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create account');
-      throw err;
-    }
-  };
 
   const login = async (email: string, password: string) => {
     setError(null);
@@ -186,7 +158,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{ 
         auth, 
         login,
-        signup,
         logout, 
         updateFacility, 
         addFacility, 
