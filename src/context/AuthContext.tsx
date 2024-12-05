@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getFacilities, createFacility, updateFacility as updateFacilityInDb, deleteFacility as deleteFacilityInDb } from '../services/facilities';
 import type { AuthState, Facility } from '../types';
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function loadFacilities() {
@@ -43,18 +45,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth.isAuthenticated]);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setAuth(prev => ({
         ...prev,
         isAuthenticated: !!session,
       }));
       setLoading(false);
+
+      if (event === 'SIGNED_IN') {
+        navigate('/dashboard');
+      } else if (event === 'SIGNED_OUT') {
+        navigate('/');
+      }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const clearError = () => setError(null);
 
@@ -77,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Failed to create account');
       }
 
+      navigate('/dashboard');
     } catch (err) {
       console.error('Signup error:', err);
       setError(err instanceof Error ? err.message : 'Failed to create account');
@@ -100,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Invalid email or password');
       }
 
+      navigate('/dashboard');
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Invalid email or password');
@@ -116,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: false,
         facilities: [],
       });
+      navigate('/');
     } catch (err) {
       console.error('Logout error:', err);
       setError(err instanceof Error ? err.message : 'Failed to log out');
