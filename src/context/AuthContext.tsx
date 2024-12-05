@@ -13,6 +13,7 @@ interface AuthContextType {
   deleteFacility: (facilityId: string) => Promise<void>;
   loading: boolean;
   error: string | null;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -55,17 +56,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const clearError = () => setError(null);
+
   const signup = async (email: string, password: string) => {
     setError(null);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`
+        }
       });
-      if (error) throw error;
+
+      if (signUpError) {
+        throw new Error(signUpError.message);
+      }
+
+      if (!data.user || !data.session) {
+        throw new Error('Failed to create account');
+      }
+
     } catch (err) {
       console.error('Signup error:', err);
-      setError('Failed to create account');
+      setError(err instanceof Error ? err.message : 'Failed to create account');
       throw err;
     }
   };
@@ -73,14 +87,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      if (error) throw error;
+
+      if (signInError) {
+        throw new Error(signInError.message);
+      }
+
+      if (!data.user || !data.session) {
+        throw new Error('Invalid email or password');
+      }
+
     } catch (err) {
       console.error('Login error:', err);
-      setError('Invalid email or password');
+      setError(err instanceof Error ? err.message : 'Invalid email or password');
       throw err;
     }
   };
@@ -88,15 +110,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setError(null);
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) throw signOutError;
       setAuth({
         isAuthenticated: false,
         facilities: [],
       });
     } catch (err) {
       console.error('Logout error:', err);
-      setError('Failed to log out');
+      setError(err instanceof Error ? err.message : 'Failed to log out');
       throw err;
     }
   };
@@ -111,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }));
     } catch (err) {
       console.error('Add facility error:', err);
-      setError('Failed to add facility');
+      setError(err instanceof Error ? err.message : 'Failed to add facility');
       throw err;
     }
   };
@@ -128,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }));
     } catch (err) {
       console.error('Update facility error:', err);
-      setError('Failed to update facility');
+      setError(err instanceof Error ? err.message : 'Failed to update facility');
       throw err;
     }
   };
@@ -143,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }));
     } catch (err) {
       console.error('Delete facility error:', err);
-      setError('Failed to delete facility');
+      setError(err instanceof Error ? err.message : 'Failed to delete facility');
       throw err;
     }
   };
@@ -159,7 +181,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         addFacility, 
         deleteFacility,
         loading,
-        error
+        error,
+        clearError
       }}
     >
       {children}

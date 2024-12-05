@@ -1,28 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserPlus } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { signup, error } = useAuth();
+  const { signup, error, clearError } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
+  const [validationError, setValidationError] = useState('');
+
+  useEffect(() => {
+    // Clear any existing auth errors when component mounts
+    clearError();
+  }, [clearError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError('');
+    
     if (formData.password !== formData.confirmPassword) {
+      setValidationError('Passwords do not match');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setValidationError('Password must be at least 6 characters long');
       return;
     }
     
     setLoading(true);
     try {
       await signup(formData.email, formData.password);
-      navigate('/dashboard');
+      // Don't navigate here - wait for auth state change
     } catch (err) {
       console.error('Signup error:', err);
     } finally {
@@ -49,9 +63,9 @@ export function SignupPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {error && (
+          {(error || validationError) && (
             <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
-              {error}
+              {error || validationError}
             </div>
           )}
           
@@ -90,6 +104,9 @@ export function SignupPage() {
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
+              <p className="mt-1 text-sm text-gray-500">
+                Must be at least 6 characters
+              </p>
             </div>
 
             <div>
