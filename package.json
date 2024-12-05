@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.7",
     "@turf/distance": "^6.5.0",
     "@turf/helpers": "^6.5.0",
     "lucide-react": "^0.344.0",
