@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Building2, Phone, Mail, User, Printer } from 'lucide-react';
 import type { SearchFilters, Facility } from '../types';
 import { calculateMatchPercentage } from '../utils/matchCalculator';
 import { SortControls, type SortOption } from '../components/SortControls';
-import { useAuth } from '../context/AuthContext';
+import { searchFacilities } from '../services/facilities';
 
 interface FacilityWithMatch extends Facility {
   matchPercentage: number;
@@ -37,9 +37,55 @@ export function SearchResultsPage() {
   const location = useLocation();
   const filters = location.state as SearchFilters;
   const [sortBy, setSortBy] = useState<SortOption>('match');
-  const { auth } = useAuth();
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  const results = filterAndSortFacilities(auth.facilities, filters, sortBy);
+  useEffect(() => {
+    async function loadFacilities() {
+      try {
+        const data = await searchFacilities();
+        setFacilities(data);
+      } catch (err) {
+        console.error('Error loading facilities:', err);
+        setError('Failed to load facilities');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadFacilities();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading results...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center py-12 bg-white rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error</h3>
+          <p className="text-gray-500 mb-4">{error}</p>
+          <Link
+            to="/"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+          >
+            Back to Search
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const results = filterAndSortFacilities(facilities, filters, sortBy);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -95,27 +141,33 @@ export function SearchResultsPage() {
                   <div>
                     <h3 className="font-medium text-gray-900 mb-2">Contact Information</h3>
                     <div className="space-y-2 text-sm">
-                      <div className="flex items-center">
-                        <User className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>{facility.contact.name}</span>
-                        {facility.contact.phoneExt && (
-                          <span className="ml-2 text-gray-500">
-                            (ext. {facility.contact.phoneExt})
-                          </span>
-                        )}
-                      </div>
+                      {facility.contact.name && (
+                        <div className="flex items-center">
+                          <User className="h-4 w-4 mr-2 text-gray-400" />
+                          <span>{facility.contact.name}</span>
+                          {facility.contact.phoneExt && (
+                            <span className="ml-2 text-gray-500">
+                              (ext. {facility.contact.phoneExt})
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <div className="flex items-center">
                         <Phone className="h-4 w-4 mr-2 text-gray-400" />
                         <span>{facility.phone}</span>
                       </div>
-                      <div className="flex items-center">
-                        <Printer className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>{facility.fax}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>{facility.contact.email}</span>
-                      </div>
+                      {facility.fax && (
+                        <div className="flex items-center">
+                          <Printer className="h-4 w-4 mr-2 text-gray-400" />
+                          <span>{facility.fax}</span>
+                        </div>
+                      )}
+                      {facility.contact.email && (
+                        <div className="flex items-center">
+                          <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                          <span>{facility.contact.email}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

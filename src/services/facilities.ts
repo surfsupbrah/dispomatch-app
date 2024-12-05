@@ -13,24 +13,18 @@ export async function getFacilities() {
 
   if (error) throw error;
 
-  // Transform the data to match our Facility type
-  return data.map(facility => ({
-    id: facility.id,
-    name: facility.name,
-    type: facility.type,
-    location: facility.location,
-    phone: facility.phone,
-    fax: facility.fax,
-    contact: {
-      name: facility.contact_name || '',
-      email: facility.contact_email || '',
-      phoneExt: facility.contact_phone_ext || '',
-    },
-    imageUrl: facility.image_url,
-    insurances: facility.insurances,
-    services: facility.services,
-    bedAvailability: facility.bed_availability,
-  }));
+  return transformFacilities(data);
+}
+
+export async function searchFacilities() {
+  const { data, error } = await supabase
+    .from('facilities')
+    .select('*')
+    .order('name');
+
+  if (error) throw error;
+
+  return transformFacilities(data);
 }
 
 export async function createFacility(facility: Omit<Facility, 'id'>) {
@@ -59,24 +53,7 @@ export async function createFacility(facility: Omit<Facility, 'id'>) {
 
   if (error) throw error;
 
-  // Transform the data to match our Facility type
-  return {
-    id: data.id,
-    name: data.name,
-    type: data.type,
-    location: data.location,
-    phone: data.phone,
-    fax: data.fax,
-    contact: {
-      name: data.contact_name || '',
-      email: data.contact_email || '',
-      phoneExt: data.contact_phone_ext || '',
-    },
-    imageUrl: data.image_url,
-    insurances: data.insurances,
-    services: data.services,
-    bedAvailability: data.bed_availability,
-  };
+  return transformFacility(data);
 }
 
 export async function updateFacility(id: string, facility: Partial<Omit<Facility, 'id'>>) {
@@ -106,7 +83,24 @@ export async function updateFacility(id: string, facility: Partial<Omit<Facility
 
   if (error) throw error;
 
-  // Transform the data to match our Facility type
+  return transformFacility(data);
+}
+
+export async function deleteFacility(id: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { error } = await supabase
+    .from('facilities')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  if (error) throw error;
+}
+
+// Helper functions to transform database records to our Facility type
+function transformFacility(data: any): Facility {
   return {
     id: data.id,
     name: data.name,
@@ -126,15 +120,6 @@ export async function updateFacility(id: string, facility: Partial<Omit<Facility
   };
 }
 
-export async function deleteFacility(id: string) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-
-  const { error } = await supabase
-    .from('facilities')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', user.id);
-
-  if (error) throw error;
+function transformFacilities(data: any[]): Facility[] {
+  return data.map(transformFacility);
 }
