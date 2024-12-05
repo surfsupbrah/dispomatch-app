@@ -15,7 +15,7 @@ export function HomePage() {
             Find the Perfect Post-Acute Care Facility
           </h1>
           <p className="text-xl text-gray-600">
-            Helping case managers connect patients with the right care facilities
+            Connecting patients with the right care facilities
           </p>
         </div>
         <SearchForm initialFilters={savedFilters} />
