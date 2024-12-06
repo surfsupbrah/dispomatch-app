@@ -5,6 +5,7 @@ import type { SearchFilters, Facility } from '../types';
 import { calculateMatchPercentage } from '../utils/matchCalculator';
 import { SortControls, type SortOption } from '../components/SortControls';
 import { searchFacilities } from '../services/facilities';
+import { formatLastUpdated } from '../utils/dateFormatter';
 
 interface FacilityWithMatch extends Facility {
   matchPercentage: number;
@@ -121,10 +122,13 @@ export function SearchResultsPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className={`px-3 py-1 rounded-full text-sm font-medium
-                      ${facility.bedAvailability === 'yes' ? 'bg-green-100 text-green-800' :
-                        facility.bedAvailability === 'no' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'}`}>
+                    <div 
+                      className={`px-3 py-1 rounded-full text-sm font-medium cursor-help
+                        ${facility.bedAvailability === 'yes' ? 'bg-green-100 text-green-800' :
+                          facility.bedAvailability === 'no' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'}`}
+                      title={formatLastUpdated(facility.updatedAt)}
+                    >
                       {facility.bedAvailability === 'yes' ? 'Beds Available' :
                        facility.bedAvailability === 'no' ? 'No Beds' : 'Unknown Availability'}
                     </div>

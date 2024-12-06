@@ -27,7 +27,7 @@ export async function searchFacilities() {
   return transformFacilities(data);
 }
 
-export async function createFacility(facility: Omit<Facility, 'id'>) {
+export async function createFacility(facility: Omit<Facility, 'id' | 'updatedAt'>) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -56,7 +56,7 @@ export async function createFacility(facility: Omit<Facility, 'id'>) {
   return transformFacility(data);
 }
 
-export async function updateFacility(id: string, facility: Partial<Omit<Facility, 'id'>>) {
+export async function updateFacility(id: string, facility: Partial<Omit<Facility, 'id' | 'updatedAt'>>) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
@@ -99,7 +99,6 @@ export async function deleteFacility(id: string) {
   if (error) throw error;
 }
 
-// Helper functions to transform database records to our Facility type
 function transformFacility(data: any): Facility {
   return {
     id: data.id,
@@ -117,6 +116,7 @@ function transformFacility(data: any): Facility {
     insurances: data.insurances,
     services: data.services,
     bedAvailability: data.bed_availability,
+    updatedAt: data.updated_at,
   };
 }
 

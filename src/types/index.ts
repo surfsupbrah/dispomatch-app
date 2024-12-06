@@ -66,6 +66,7 @@ export interface Facility {
   insurances: Insurance[];
   services: Service[];
   bedAvailability: BedAvailability;
+  updatedAt: string;
 }
 
 export interface AuthState {
