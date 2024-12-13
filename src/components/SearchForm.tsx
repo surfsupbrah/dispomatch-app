@@ -2,57 +2,12 @@ import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MultiSelect } from './MultiSelect';
-import type { SearchFilters, Insurance, Service, FacilityType } from '../types';
+import { facilityTypes, insurances, services } from '../features/facilities/constants';
+import type { SearchFilters } from '../types';
 
 interface SearchFormProps {
   initialFilters?: SearchFilters;
 }
-
-const facilityTypes: FacilityType[] = [
-  'Skilled Nursing Facility',
-  'Short Term Rehab',
-  'Assisted Living Facility',
-  'Inpatient Rehabilitation Unit',
-  'Home Services Provider',
-  'Long Term Acute Care Hospital (LTACH)'
-];
-
-const insurances: Insurance[] = [
-  'Medicaid',
-  'Medicare',
-  'Blue Cross & Blue Shield',
-  'Neighborhood Health',
-  'UnitedHealthcare',
-  'Tufts Health Plan',
-  'Aetna',
-  'Harvard Pilgrim',
-  'Cigna',
-  'AmeriHealth Caritas',
-  'Molina',
-  'Oscar',
-  'Other'
-];
-
-const services: Service[] = [
-  'OT',
-  'PT',
-  'Speech Therapy',
-  'Wound Care',
-  'Medication Administration',
-  'IV Medication Administration',
-  'Social Services',
-  'Nutrition Services',
-  'Palliative & Hospice Care',
-  'Behavioral Health',
-  'Mobility Assistance',
-  'ADL Assistance',
-  '24-hour Nursing',
-  'Memory Care',
-  'Oxygen Therapy',
-  'Transportation Services & Facility Transfers',
-  'Interpreter Services',
-  'Case Management'
-];
 
 export function SearchForm({ initialFilters }: SearchFormProps) {
   const navigate = useNavigate();
@@ -76,7 +31,7 @@ export function SearchForm({ initialFilters }: SearchFormProps) {
         <MultiSelect
           options={facilityTypes}
           selected={filters.facilityTypes}
-          onChange={(selected) => setFilters({ ...filters, facilityTypes: selected as FacilityType[] })}
+          onChange={(selected) => setFilters({ ...filters, facilityTypes: selected })}
           label="Facility Types"
         />
       </div>
@@ -85,14 +40,14 @@ export function SearchForm({ initialFilters }: SearchFormProps) {
         <MultiSelect
           options={insurances}
           selected={filters.insurances}
-          onChange={(selected) => setFilters({ ...filters, insurances: selected as Insurance[] })}
+          onChange={(selected) => setFilters({ ...filters, insurances: selected })}
           label="Insurances Accepted"
         />
 
         <MultiSelect
           options={services}
           selected={filters.services}
-          onChange={(selected) => setFilters({ ...filters, services: selected as Service[] })}
+          onChange={(selected) => setFilters({ ...filters, services: selected })}
           label="Services Required"
         />
       </div>
