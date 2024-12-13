@@ -1,13 +1,13 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useSession } from '../hooks/useSession';
 
 interface ProtectedDashboardProps {
   children: React.ReactNode;
 }
 
 export function ProtectedDashboard({ children }: ProtectedDashboardProps) {
-  const { auth, loading } = useAuth();
+  const { isAuthenticated, loading } = useSession();
 
   if (loading) {
     return (
@@ -17,9 +17,11 @@ export function ProtectedDashboard({ children }: ProtectedDashboardProps) {
     );
   }
 
-  if (!auth.isAuthenticated) {
+  // Only redirect if we're definitely not authenticated
+  if (!loading && !isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
+  // If we're still loading or authenticated, render children
   return <>{children}</>;
 }

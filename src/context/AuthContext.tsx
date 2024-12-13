@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useSession } from '../hooks/useSession';
 import { getFacilities, createFacility, updateFacility as updateFacilityInDb, deleteFacility as deleteFacilityInDb } from '../services/facilities';
 import type { AuthState, Facility } from '../types';
 
@@ -19,6 +20,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { session, loading: sessionLoading, isAuthenticated } = useSession();
   const [auth, setAuth] = useState<AuthState>({
     isAuthenticated: false,
     facilities: [],
@@ -29,39 +31,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function loadFacilities() {
-      if (auth.isAuthenticated) {
+      if (isAuthenticated) {
         try {
           const facilities = await getFacilities();
-          setAuth(prev => ({ ...prev, facilities }));
+          setAuth(prev => ({ ...prev, facilities, isAuthenticated: true }));
         } catch (err) {
           console.error('Error loading facilities:', err);
           setError('Failed to load facilities');
         }
+      } else {
+        setAuth(prev => ({ ...prev, facilities: [], isAuthenticated: false }));
       }
+      setLoading(false);
     }
 
-    loadFacilities();
-  }, [auth.isAuthenticated]);
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setAuth(prev => ({
-        ...prev,
-        isAuthenticated: !!session,
-      }));
-      setLoading(false);
-
-      if (event === 'SIGNED_IN') {
-        navigate('/dashboard');
-      } else if (event === 'SIGNED_OUT') {
-        navigate('/');
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+    if (!sessionLoading) {
+      loadFacilities();
+    }
+  }, [isAuthenticated, sessionLoading]);
 
   const clearError = () => setError(null);
 
@@ -162,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updateFacility, 
         addFacility, 
         deleteFacility,
-        loading,
+        loading: loading || sessionLoading,
         error,
         clearError
       }}
