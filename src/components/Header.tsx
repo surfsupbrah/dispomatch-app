@@ -2,7 +2,7 @@ import React from 'react';
 import { Building2 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { LogoutButton } from './LogoutButton';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 
 export function Header() {
   const location = useLocation();

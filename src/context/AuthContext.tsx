@@ -1,15 +1,27 @@
-import { createContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useSession } from '../hooks/useSession';
 import { getFacilities, createFacility, updateFacility as updateFacilityInDb, deleteFacility as deleteFacilityInDb } from '../services/facilities';
-import type { AuthContextState, AuthContextType } from './types';
+import type { AuthState, Facility } from '../types';
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+interface AuthContextType {
+  auth: AuthState;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateFacility: (facility: Facility) => Promise<void>;
+  addFacility: (facility: Facility) => Promise<void>;
+  deleteFacility: (facilityId: string) => Promise<void>;
+  loading: boolean;
+  error: string | null;
+  clearError: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { session, loading: sessionLoading, isAuthenticated } = useSession();
-  const [auth, setAuth] = useState<AuthContextState>({
+  const [auth, setAuth] = useState<AuthState>({
     isAuthenticated: false,
     facilities: [],
   });
@@ -145,4 +157,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }

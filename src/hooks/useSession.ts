@@ -1,43 +1,28 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Session } from '@supabase/supabase-js';
-import { useNavigate } from 'react-router-dom';
 
-interface SessionState {
-  session: Session | null;
-  loading: boolean;
-  isAuthenticated: boolean;
-}
-
-export function useSession(): SessionState {
+export function useSession() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
-    async function initializeSession() {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
       setLoading(false);
-    }
+    });
 
-    initializeSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      setSession(currentSession);
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
       setLoading(false);
-
-      if (event === 'SIGNED_IN') {
-        navigate('/dashboard');
-      } else if (event === 'SIGNED_OUT') {
-        navigate('/');
-      }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
   return {
     session,
