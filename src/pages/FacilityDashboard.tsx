@@ -2,7 +2,7 @@ import React from 'react';
 import { Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FacilityCard } from '../components/FacilityCard';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import type { Facility, BedAvailability } from '../types';
 
 export function FacilityDashboard() {
