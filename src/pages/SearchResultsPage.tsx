@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Building2, Phone, Mail, User, Printer } from 'lucide-react';
+import { Building2, Phone, Mail, User, Printer, Loader } from 'lucide-react';
 import type { SearchFilters, Facility } from '../types';
 import { calculateMatchPercentage } from '../utils/matchCalculator';
 import { SortControls, type SortOption } from '../components/SortControls';
@@ -11,15 +11,19 @@ interface FacilityWithMatch extends Facility {
   matchPercentage: number;
 }
 
+const RESULTS_PER_PAGE = 10;
+
 function filterAndSortFacilities(
   facilities: Facility[],
   filters: SearchFilters,
   sortBy: SortOption = 'match'
 ): FacilityWithMatch[] {
-  const results = facilities.map(facility => ({
-    ...facility,
-    matchPercentage: calculateMatchPercentage(facility, filters)
-  })).filter(facility => facility.matchPercentage > 0);
+  const results = facilities
+    .map(facility => ({
+      ...facility,
+      matchPercentage: calculateMatchPercentage(facility, filters)
+    }))
+    .filter(facility => facility.matchPercentage > 0);
 
   return results.sort((a, b) => {
     switch (sortBy) {
@@ -40,8 +44,10 @@ export function SearchResultsPage() {
   const [sortBy, setSortBy] = useState<SortOption>('match');
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+  const [displayCount, setDisplayCount] = useState(RESULTS_PER_PAGE);
+
   useEffect(() => {
     async function loadFacilities() {
       try {
@@ -57,6 +63,23 @@ export function SearchResultsPage() {
 
     loadFacilities();
   }, []);
+
+  const results = filterAndSortFacilities(facilities, filters, sortBy);
+  const hasMore = displayCount < results.length;
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    // Simulate network delay for smooth UX
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setDisplayCount(prev => prev + RESULTS_PER_PAGE);
+    setLoadingMore(false);
+    
+    // Smooth scroll to the new content
+    const lastItem = document.querySelector('.facility-card:last-child');
+    if (lastItem) {
+      lastItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   if (loading) {
     return (
@@ -86,7 +109,7 @@ export function SearchResultsPage() {
     );
   }
 
-  const results = filterAndSortFacilities(facilities, filters, sortBy);
+  const displayedResults = results.slice(0, displayCount);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -95,14 +118,18 @@ export function SearchResultsPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Search Results</h1>
           <p className="text-gray-600">
             Found {results.length} matching facilities
+            {results.length > 0 && ` (Showing ${Math.min(displayCount, results.length)})`}
           </p>
         </div>
         <SortControls sortBy={sortBy} onChange={setSortBy} />
       </div>
 
       <div className="space-y-6">
-        {results.map(facility => (
-          <div key={facility.id} className="bg-white shadow-md rounded-lg p-6">
+        {displayedResults.map((facility, index) => (
+          <div 
+            key={facility.id} 
+            className="facility-card bg-white shadow-md rounded-lg p-6 transition-all duration-300 hover:shadow-lg"
+          >
             <div className="flex flex-col md:flex-row md:items-start md:space-x-6">
               <div className="w-full md:w-1/4 mb-4 md:mb-0">
                 <img
@@ -234,6 +261,25 @@ export function SearchResultsPage() {
             >
               Back to Search
             </Link>
+          </div>
+        )}
+
+        {hasMore && (
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors duration-200"
+            >
+              {loadingMore ? (
+                <>
+                  <Loader className="animate-spin -ml-1 mr-2 h-5 w-5" />
+                  Loading more...
+                </>
+              ) : (
+                'Show 10 More'
+              )}
+            </button>
           </div>
         )}
       </div>
