@@ -41,8 +41,7 @@ export type FacilityType =
   | 'Assisted Living Facility'
   | 'Inpatient Rehabilitation Unit'
   | 'Home Services Provider'
-  | 'Long Term Acute Care Hospital (LTACH)'
-  | 'Hospice';
+  | 'Long Term Acute Care Hospital (LTACH)';
 
 export interface SearchFilters {
   facilityTypes: FacilityType[];

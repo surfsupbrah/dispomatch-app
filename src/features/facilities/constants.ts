@@ -4,8 +4,7 @@ export const facilityTypes = [
   'Assisted Living Facility',
   'Inpatient Rehabilitation Unit',
   'Home Services Provider',
-  'Long Term Acute Care Hospital (LTACH)',
-  'Hospice'
+  'Long Term Acute Care Hospital (LTACH)'
 ] as const;
 
 export const insurances = [
