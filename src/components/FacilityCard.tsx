@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Edit } from 'lucide-react';
+import { Building2, Edit, Phone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Facility, BedAvailability } from '../types';
 
@@ -39,21 +39,28 @@ export function FacilityCard({ facility, onBedAvailabilityChange }: FacilityCard
         </Link>
       </div>
 
-      <div className="mt-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Bed Availability
-        </label>
-        <select
-          value={facility.bedAvailability}
-          onChange={(e) => onBedAvailabilityChange(facility.id, e.target.value as BedAvailability)}
-          className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${getBedAvailabilityColor(
-            facility.bedAvailability
-          )}`}
-        >
-          <option value="yes">Available</option>
-          <option value="no">Not Available</option>
-          <option value="unknown">Unknown</option>
-        </select>
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center text-gray-600">
+          <Phone className="h-4 w-4 mr-2" />
+          <span>{facility.phone}</span>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Bed Availability
+          </label>
+          <select
+            value={facility.bedAvailability}
+            onChange={(e) => onBedAvailabilityChange(facility.id, e.target.value as BedAvailability)}
+            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${getBedAvailabilityColor(
+              facility.bedAvailability
+            )}`}
+          >
+            <option value="yes">Available</option>
+            <option value="no">Not Available</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
       </div>
     </div>
   );
