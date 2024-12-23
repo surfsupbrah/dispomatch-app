@@ -1,13 +1,11 @@
-import type { Address, Coordinates } from '../types';
+import type { Coordinates } from '../types';
 
 interface NominatimResponse {
   lat: string;
   lon: string;
 }
 
-export async function getCoordinatesFromAddress(address: Address): Promise<Coordinates | null> {
-  const query = `${address.street}, ${address.city}, ${address.state} ${address.zip}, USA`;
-  
+async function searchNominatim(query: string): Promise<Coordinates | undefined> {
   try {
     const encodedQuery = encodeURIComponent(query);
     const response = await fetch(
@@ -32,9 +30,15 @@ export async function getCoordinatesFromAddress(address: Address): Promise<Coord
       };
     }
     
-    return null;
+    return undefined;
   } catch (error) {
     console.error('Geocoding error:', error);
-    return null;
+    return undefined;
   }
+}
+
+export async function getCoordinatesFromSearch(searchString: string): Promise<Coordinates | undefined> {
+  if (!searchString) return undefined;
+  
+  return searchNominatim(searchString);
 }

@@ -73,18 +73,3 @@ export interface AuthState {
   isAuthenticated: boolean;
   facilities: Facility[];
 }
-
-export interface SearchResult extends Facility {
-  distance: number | null;
-  matchPercentage: number;
-}
-
-export interface SearchFilters {
-  facilityTypes: FacilityType[];
-  insurances: Insurance[];
-  services: Service[];
-  availableBeds: 'yes' | 'no' | 'any';
-  maxDistance?: number;
-  sortBy?: 'distance' | 'match' | 'bedAvailability';
-  location?: LocationState;
-}
