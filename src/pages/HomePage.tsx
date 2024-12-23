@@ -15,7 +15,7 @@ export function HomePage() {
             Find the Perfect Post-Acute Care Facility in RI
           </h1>
           <p className="text-xl text-gray-600">
-            Connecting patients with the right care facilities in Rhode Island
+            Connecting patients in Rhode Island
           </p>
         </div>
         <SearchForm initialFilters={savedFilters} />
