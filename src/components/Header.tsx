@@ -22,12 +22,20 @@ export function Header() {
         </Link>
         <div className="flex items-center space-x-4">
           {(isHomePage || (!isDashboard && !auth.isAuthenticated)) && (
-            <Link
-              to="/dashboard"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              Manage Facilities
-            </Link>
+            <>
+              <Link
+                to="/feedback"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Feedback
+              </Link>
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Manage Facilities
+              </Link>
+            </>
           )}
           {auth.isAuthenticated ? (
             <LogoutButton />

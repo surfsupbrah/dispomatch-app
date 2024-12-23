@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { FacilityPage } from './pages/FacilityPage';
 import { FacilityDashboard } from './pages/FacilityDashboard';
 import { SearchResultsPage } from './pages/SearchResultsPage';
+import { FeedbackPage } from './pages/FeedbackPage';
 import { ProtectedDashboard } from './components/ProtectedDashboard';
 
 export function AppRoutes() {
@@ -16,6 +17,7 @@ export function AppRoutes() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/search" element={<SearchResultsPage />} />
+        <Route path="/feedback" element={<FeedbackPage />} />
         <Route
           path="/dashboard"
           element={
