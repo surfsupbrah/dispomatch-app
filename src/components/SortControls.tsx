@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowUpDown } from 'lucide-react';
 
-export type SortOption = 'match' | 'bedAvailability' | 'distance';
+export type SortOption = 'match' | 'bedAvailability';
 
 interface SortControlsProps {
   sortBy: SortOption;
@@ -20,7 +20,6 @@ export function SortControls({ sortBy, onChange }: SortControlsProps) {
       >
         <option value="match">% Match</option>
         <option value="bedAvailability">Bed Availability</option>
-        <option value="distance">Distance</option>
       </select>
     </div>
   );

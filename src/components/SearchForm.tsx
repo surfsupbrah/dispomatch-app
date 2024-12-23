@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MultiSelect } from './MultiSelect';
-import { LocationSearch } from './LocationSearch';
 import type { SearchFilters, Insurance, Service, FacilityType } from '../types';
 
 interface SearchFormProps {
@@ -61,13 +60,7 @@ export function SearchForm({ initialFilters }: SearchFormProps) {
     facilityTypes: [],
     insurances: [],
     services: [],
-    availableBeds: 'any',
-    location: {
-      address: '',
-      radius: 25,
-      useCurrentLocation: false,
-      loading: false
-    }
+    availableBeds: 'any'
   };
   
   const [filters, setFilters] = useState<SearchFilters>(initialFilters || defaultFilters);
@@ -103,11 +96,6 @@ export function SearchForm({ initialFilters }: SearchFormProps) {
           label="Services Required"
         />
       </div>
-      
-      <LocationSearch
-        value={filters.location}
-        onChange={(location) => setFilters({ ...filters, location })}
-      />
 
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">

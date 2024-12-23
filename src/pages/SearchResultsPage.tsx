@@ -2,15 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Building2, Phone, Mail, User, Printer, Loader } from 'lucide-react';
 import type { SearchFilters, Facility } from '../types';
-import { calculateMatchPercentage, calculateDistanceScore } from '../utils/matchCalculator';
+import { calculateMatchPercentage } from '../utils/matchCalculator';
 import { SortControls, type SortOption } from '../components/SortControls';
 import { searchFacilities } from '../services/facilities';
 import { formatLastUpdated } from '../utils/dateFormatter';
-import { calculateDistance } from '../utils/distance';
 
 interface FacilityWithMatch extends Facility {
   matchPercentage: number;
-  distance?: number;
 }
 
 const RESULTS_PER_PAGE = 10;
@@ -23,21 +21,9 @@ function filterAndSortFacilities(
   const results = facilities
     .map(facility => ({
       ...facility,
-      matchPercentage: calculateMatchPercentage(facility, filters),
-      distance: filters.location?.coordinates 
-        ? calculateDistance(filters.location.coordinates, facility.coordinates)
-        : undefined
+      matchPercentage: calculateMatchPercentage(facility, filters)
     }))
-    .filter(facility => {
-      if (facility.matchPercentage === 0) return false;
-      
-      // Filter by distance if location search is active
-      if (filters.location?.coordinates && facility.distance !== undefined) {
-        return facility.distance <= filters.location.radius;
-      }
-      
-      return true;
-    });
+    .filter(facility => facility.matchPercentage > 0);
 
   return results.sort((a, b) => {
     switch (sortBy) {
@@ -46,9 +32,6 @@ function filterAndSortFacilities(
       case 'bedAvailability':
         const bedOrder = { yes: 0, unknown: 1, no: 2 };
         return bedOrder[a.bedAvailability] - bedOrder[b.bedAvailability];
-      case 'distance':
-        if (a.distance === undefined || b.distance === undefined) return 0;
-        return a.distance - b.distance;
       default:
         return 0;
     }
@@ -182,11 +165,6 @@ export function SearchResultsPage() {
                         'bg-orange-100 text-orange-800'}`}>
                       {facility.matchPercentage}% Match
                     </div>
-                    {facility.distance !== undefined && (
-                      <div className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                        {facility.distance.toFixed(1)} miles away
-                      </div>
-                    )}
                   </div>
                 </div>
 

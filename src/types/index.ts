@@ -48,7 +48,6 @@ export interface SearchFilters {
   insurances: Insurance[];
   services: Service[];
   availableBeds: 'yes' | 'no' | 'any';
-  location?: LocationSearchState;
 }
 
 export interface Facility {
@@ -68,21 +67,6 @@ export interface Facility {
   services: Service[];
   bedAvailability: BedAvailability;
   updatedAt: string;
-  coordinates?: Coordinates;
-}
-
-export interface Coordinates {
-  lat: number;
-  lng: number;
-}
-
-export interface LocationSearchState {
-  coordinates?: Coordinates;
-  address: string;
-  radius: number;
-  useCurrentLocation: boolean;
-  loading: boolean;
-  error?: string;
 }
 
 export interface AuthState {
