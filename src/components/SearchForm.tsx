@@ -2,76 +2,66 @@ import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MultiSelect } from './MultiSelect';
-import type { SearchFilters, Insurance, Service, FacilityType } from '../types';
+import { AddressForm } from './AddressForm';
+import { useLocationSearch } from '../hooks/useLocationSearch';
+import type { SearchFilters, Insurance, Service, FacilityType, Address } from '../types';
+
+const emptyAddress: Address = {
+  street: '',
+  city: '',
+  state: '',
+  zip: ''
+};
 
 interface SearchFormProps {
   initialFilters?: SearchFilters;
 }
 
-const facilityTypes: FacilityType[] = [
-  'Skilled Nursing Facility',
-  'Short Term Rehab',
-  'Assisted Living Facility',
-  'Inpatient Rehabilitation Unit',
-  'Home Services Provider',
-  'Long Term Acute Care Hospital (LTACH)'
-];
-
-const insurances: Insurance[] = [
-  'Medicaid',
-  'Medicare',
-  'Blue Cross & Blue Shield',
-  'Neighborhood Health',
-  'UnitedHealthcare',
-  'Tufts Health Plan',
-  'Aetna',
-  'Harvard Pilgrim',
-  'Cigna',
-  'AmeriHealth Caritas',
-  'Molina',
-  'Oscar',
-  'Other'
-];
-
-const services: Service[] = [
-  'OT',
-  'PT',
-  'Speech Therapy',
-  'Wound Care',
-  'Medication Administration',
-  'IV Medication Administration',
-  'Social Services',
-  'Nutrition Services',
-  'Palliative & Hospice Care',
-  'Behavioral Health',
-  'Mobility Assistance',
-  'ADL Assistance',
-  '24-hour Nursing',
-  'Memory Care',
-  'Oxygen Therapy',
-  'Transportation Services & Facility Transfers',
-  'Interpreter Services',
-  'Case Management'
-];
-
 export function SearchForm({ initialFilters }: SearchFormProps) {
   const navigate = useNavigate();
+  const { searchLocation, loading, error } = useLocationSearch();
+  const [address, setAddress] = useState<Address>(emptyAddress);
   const defaultFilters: SearchFilters = {
     facilityTypes: [],
     insurances: [],
     services: [],
-    availableBeds: 'any'
+    availableBeds: 'any',
+    maxDistance: 50
   };
   
   const [filters, setFilters] = useState<SearchFilters>(initialFilters || defaultFilters);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/search', { state: filters });
+    
+    const coordinates = await searchLocation(address);
+    if (!coordinates) return;
+
+    navigate('/search', { 
+      state: { 
+        ...filters,
+        location: {
+          address,
+          coordinates
+        }
+      } 
+    });
   };
 
   return (
     <form onSubmit={handleSearch} className="space-y-6 bg-white p-6 rounded-lg shadow-md">
+      <AddressForm
+        address={address}
+        onChange={setAddress}
+        className="mb-6"
+      />
+
+      {error && (
+        <div className="p-3 bg-red-100 text-red-700 rounded-md">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6">
         <MultiSelect
           options={facilityTypes}
@@ -137,10 +127,11 @@ export function SearchForm({ initialFilters }: SearchFormProps) {
 
       <button
         type="submit"
-        className="w-full flex justify-center items-center space-x-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        disabled={loading}
+        className="w-full flex justify-center items-center space-x-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
       >
         <Search className="h-5 w-5" />
-        <span>Search Facilities</span>
+        <span>{loading ? 'Searching...' : 'Search Facilities'}</span>
       </button>
     </form>
   );
