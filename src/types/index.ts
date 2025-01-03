@@ -48,6 +48,12 @@ export interface SearchFilters {
   insurances: Insurance[];
   services: Service[];
   availableBeds: 'yes' | 'no' | 'any';
+  location?: string;
+}
+
+export interface Coordinates {
+  lat: number;
+  lng: number;
 }
 
 export interface Facility {
@@ -67,6 +73,7 @@ export interface Facility {
   services: Service[];
   bedAvailability: BedAvailability;
   updatedAt: string;
+  coordinates?: Coordinates;
 }
 
 export interface AuthState {

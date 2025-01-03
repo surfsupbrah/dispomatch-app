@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, MapPin, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MultiSelect } from './MultiSelect';
+import { getCoordinatesFromSearch } from '../utils/geocoding';
 import type { SearchFilters, Insurance, Service, FacilityType } from '../types';
 
 interface SearchFormProps {
@@ -60,13 +61,60 @@ export function SearchForm({ initialFilters }: SearchFormProps) {
     facilityTypes: [],
     insurances: [],
     services: [],
-    availableBeds: 'any'
+    availableBeds: 'any',
+    location: '',
   };
   
   const [filters, setFilters] = useState<SearchFilters>(initialFilters || defaultFilters);
+  const [loading, setLoading] = useState(false);
+  const [useCurrentLocation, setUseCurrentLocation] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const getCurrentLocation = (): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported by your browser'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(resolve, reject);
+    });
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (useCurrentLocation) {
+        const position = await getCurrentLocation();
+        const coords = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        navigate('/search', { 
+          state: { 
+            ...filters,
+            coordinates: coords
+          }
+        });
+      } else if (filters.location) {
+        const coords = await getCoordinatesFromSearch(filters.location);
+        navigate('/search', { 
+          state: { 
+            ...filters,
+            coordinates: coords
+          }
+        });
+      } else {
+        navigate('/search', { state: filters });
+      }
+    } catch (error) {
+      console.error('Location error:', error);
+      // Still allow search without location
+      navigate('/search', { state: filters });
+    } finally {
+      setLoading(false);
+    }
+  };
     navigate('/search', { state: filters });
   };
 
@@ -95,6 +143,47 @@ export function SearchForm({ initialFilters }: SearchFormProps) {
           onChange={(selected) => setFilters({ ...filters, services: selected as Service[] })}
           label="Services Required"
         />
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Location (Optional)
+        </label>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Enter address or ZIP code"
+                value={filters.location || ''}
+                onChange={(e) => {
+                  setUseCurrentLocation(false);
+                  setFilters({ ...filters, location: e.target.value });
+                }}
+                disabled={useCurrentLocation}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+              <MapPin className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setUseCurrentLocation(!useCurrentLocation);
+              if (!useCurrentLocation) {
+                setFilters({ ...filters, location: '' });
+              }
+            }}
+            className={`inline-flex items-center px-4 py-2 border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+              useCurrentLocation
+                ? 'border-indigo-600 text-indigo-600 bg-indigo-50 hover:bg-indigo-100'
+                : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            Use Current Location
+          </button>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -137,10 +226,20 @@ export function SearchForm({ initialFilters }: SearchFormProps) {
 
       <button
         type="submit"
+        disabled={loading}
         className="w-full flex justify-center items-center space-x-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
       >
-        <Search className="h-5 w-5" />
-        <span>Search Facilities</span>
+        {loading ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Searching...</span>
+          </>
+        ) : (
+          <>
+            <Search className="h-5 w-5" />
+            <span>Search Facilities</span>
+          </>
+        )}
       </button>
     </form>
   );
