@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Building2, Phone, Mail, User, Printer, Loader, MapPin } from 'lucide-react';
-import type { SearchFilters, Facility, Coordinates } from '../types';
+import { Building2, Phone, Mail, User, Printer, Loader } from 'lucide-react';
+import type { SearchFilters, Facility } from '../types';
 import { calculateMatchPercentage } from '../utils/matchCalculator';
-import { calculateDistance } from '../utils/distance';
 import { SortControls, type SortOption } from '../components/SortControls';
 import { searchFacilities } from '../services/facilities';
 import { formatLastUpdated } from '../utils/dateFormatter';
 
 interface FacilityWithMatch extends Facility {
   matchPercentage: number;
-  distance?: number;
 }
 
 const RESULTS_PER_PAGE = 10;
@@ -18,22 +16,13 @@ const RESULTS_PER_PAGE = 10;
 function filterAndSortFacilities(
   facilities: Facility[],
   filters: SearchFilters,
-  sortBy: SortOption = 'match',
-  userCoords?: Coordinates
+  sortBy: SortOption = 'match'
 ): FacilityWithMatch[] {
   const results = facilities
-    .map(facility => {
-      const result: FacilityWithMatch = {
-        ...facility,
-        matchPercentage: calculateMatchPercentage(facility, filters)
-      };
-      
-      if (userCoords && facility.coordinates) {
-        result.distance = calculateDistance(userCoords, facility.coordinates);
-      }
-      
-      return result;
-    })
+    .map(facility => ({
+      ...facility,
+      matchPercentage: calculateMatchPercentage(facility, filters)
+    }))
     .filter(facility => facility.matchPercentage > 0);
 
   return results.sort((a, b) => {
@@ -43,9 +32,6 @@ function filterAndSortFacilities(
       case 'bedAvailability':
         const bedOrder = { yes: 0, unknown: 1, no: 2 };
         return bedOrder[a.bedAvailability] - bedOrder[b.bedAvailability];
-      case 'distance':
-        if (a.distance === undefined || b.distance === undefined) return 0;
-        return a.distance - b.distance;
       default:
         return 0;
     }
@@ -61,8 +47,6 @@ export function SearchResultsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [displayCount, setDisplayCount] = useState(RESULTS_PER_PAGE);
-  const userCoords = location.state?.coordinates;
-  const hasLocationData = !!userCoords;
 
   useEffect(() => {
     async function loadFacilities() {
@@ -80,7 +64,7 @@ export function SearchResultsPage() {
     loadFacilities();
   }, []);
 
-  const results = filterAndSortFacilities(facilities, filters, sortBy, userCoords);
+  const results = filterAndSortFacilities(facilities, filters, sortBy);
   const hasMore = displayCount < results.length;
 
   const handleLoadMore = async () => {
@@ -132,24 +116,12 @@ export function SearchResultsPage() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Search Results</h1>
-          <div className="space-y-1">
-            <p className="text-gray-600">
-              Found {results.length} matching facilities
-              {results.length > 0 && ` (Showing ${Math.min(displayCount, results.length)})`}
-            </p>
-            {hasLocationData && (
-              <p className="text-sm text-gray-500">
-                <MapPin className="inline-block h-4 w-4 mr-1" />
-                Showing distances from your location
-              </p>
-            )}
-          </div>
+          <p className="text-gray-600">
+            Found {results.length} matching facilities
+            {results.length > 0 && ` (Showing ${Math.min(displayCount, results.length)})`}
+          </p>
         </div>
-        <SortControls 
-          sortBy={sortBy} 
-          onChange={setSortBy}
-          showDistance={hasLocationData}
-        />
+        <SortControls sortBy={sortBy} onChange={setSortBy} />
       </div>
 
       <div className="space-y-6">
@@ -194,12 +166,6 @@ export function SearchResultsPage() {
                       {facility.matchPercentage}% Match
                     </div>
                   </div>
-                  {facility.distance !== undefined && (
-                    <div className="text-sm text-gray-500 mt-1">
-                      <MapPin className="inline-block h-4 w-4 mr-1" />
-                      {facility.distance.toFixed(1)} miles away
-                    </div>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
