@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MultiSelect } from './MultiSelect';
-import type { SearchFilters, Insurance, Service, FacilityType } from '../types';
+import { LocationSearch } from './LocationSearch';
+import type { SearchFilters, Insurance, Service, FacilityType, Coordinates } from '../types';
 
 interface SearchFormProps {
   initialFilters?: SearchFilters;
@@ -61,10 +62,21 @@ export function SearchForm({ initialFilters }: SearchFormProps) {
     facilityTypes: [],
     insurances: [],
     services: [],
-    availableBeds: 'any'
+    availableBeds: 'any',
+    location: '',
+    radius: 25,
   };
   
   const [filters, setFilters] = useState<SearchFilters>(initialFilters || defaultFilters);
+
+  const handleLocationSelect = (location: string, coordinates: Coordinates, radius?: number) => {
+    setFilters(prev => ({
+      ...prev,
+      location,
+      coordinates,
+      radius: radius || prev.radius
+    }));
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +97,11 @@ export function SearchForm({ initialFilters }: SearchFormProps) {
           className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
         />
       </div>
+
+      <LocationSearch
+        onLocationSelect={handleLocationSelect}
+        initialLocation={filters.location}
+      />
 
       <div className="grid grid-cols-1 gap-6">
         <MultiSelect

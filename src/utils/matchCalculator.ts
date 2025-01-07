@@ -1,9 +1,18 @@
+import { calculateDistance } from './distance';
 import type { Facility, SearchFilters } from '../types';
 
 export function calculateMatchPercentage(facility: Facility, filters: SearchFilters): number {
   // If there's a name filter and it doesn't match, return 0
   if (filters.facilityName && !facility.name.toLowerCase().includes(filters.facilityName.toLowerCase())) {
     return 0;
+  }
+
+  // If location is specified and facility is outside radius, return 0
+  if (filters.coordinates && facility.coordinates) {
+    const distance = calculateDistance(filters.coordinates, facility.coordinates);
+    if (filters.radius && distance > filters.radius) {
+      return 0;
+    }
   }
 
   let totalWeight = 0;

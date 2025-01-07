@@ -68,9 +68,24 @@ export interface Facility {
   services: Service[];
   bedAvailability: BedAvailability;
   updatedAt: string;
+  coordinates?: Coordinates; 
 }
 
 export interface AuthState {
   isAuthenticated: boolean;
   facilities: Facility[];
+}
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+export interface SearchFilters {
+  facilityName: string;
+  facilityTypes: FacilityType[];
+  insurances: Insurance[];
+  services: Service[];
+  availableBeds: 'yes' | 'no' | 'any';
+  location?: string;
+  radius?: number;
+  coordinates?: Coordinates;
 }

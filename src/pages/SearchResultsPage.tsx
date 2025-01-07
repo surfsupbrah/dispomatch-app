@@ -1,17 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Building2, Phone, Mail, User, Printer, Loader } from 'lucide-react';
-import type { SearchFilters, Facility } from '../types';
+import type { SearchFilters, Facility, Coordinates } from '../types';
 import { calculateMatchPercentage } from '../utils/matchCalculator';
+import { calculateDistance } from '../utils/distance';
 import { SortControls, type SortOption } from '../components/SortControls';
 import { searchFacilities } from '../services/facilities';
 import { formatLastUpdated } from '../utils/dateFormatter';
 
 interface FacilityWithMatch extends Facility {
   matchPercentage: number;
+  distance?: number;
 }
 
 const RESULTS_PER_PAGE = 10;
+
+function FacilityDistance({ facility, searchCoordinates }: { 
+  facility: Facility; 
+  searchCoordinates?: Coordinates;
+}) {
+  if (!searchCoordinates || !facility.coordinates) return null;
+
+  const distance = calculateDistance(searchCoordinates, facility.coordinates);
+  
+  return (
+    <div className="text-sm text-gray-500">
+      {distance.toFixed(1)} miles away
+    </div>
+  );
+}
 
 function filterAndSortFacilities(
   facilities: Facility[],
@@ -21,7 +38,9 @@ function filterAndSortFacilities(
   const results = facilities
     .map(facility => ({
       ...facility,
-      matchPercentage: calculateMatchPercentage(facility, filters)
+      matchPercentage: calculateMatchPercentage(facility, filters),
+      distance: filters.coordinates && facility.coordinates ? 
+        calculateDistance(filters.coordinates, facility.coordinates) : undefined
     }))
     .filter(facility => facility.matchPercentage > 0);
 
@@ -29,6 +48,9 @@ function filterAndSortFacilities(
     switch (sortBy) {
       case 'match':
         return b.matchPercentage - a.matchPercentage;
+      case 'distance':
+        if (!a.distance || !b.distance) return 0;
+        return a.distance - b.distance;
       case 'bedAvailability':
         const bedOrder = { yes: 0, unknown: 1, no: 2 };
         return bedOrder[a.bedAvailability] - bedOrder[b.bedAvailability];
@@ -69,41 +91,17 @@ export function SearchResultsPage() {
 
   const handleLoadMore = async () => {
     setLoadingMore(true);
-    // Simulate network delay for smooth UX
     await new Promise(resolve => setTimeout(resolve, 500));
     setDisplayCount(prev => prev + RESULTS_PER_PAGE);
     setLoadingMore(false);
-    
-    // Smooth scroll to the new content
-    const lastItem = document.querySelector('.facility-card:last-child');
-    if (lastItem) {
-      lastItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
   };
 
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <Loader className="h-12 w-12 animate-spin text-indigo-600 mx-auto" />
           <p className="mt-4 text-gray-600">Loading results...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Error</h3>
-          <p className="text-gray-500 mb-4">{error}</p>
-          <Link
-            to="/"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-          >
-            Back to Search
-          </Link>
         </div>
       </div>
     );
@@ -124,12 +122,16 @@ export function SearchResultsPage() {
         <SortControls sortBy={sortBy} onChange={setSortBy} />
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+          <p className="text-red-700">{error}</p>
+        </div>
+      )}
+
       <div className="space-y-6">
-        {displayedResults.map((facility, index) => (
-          <div 
-            key={facility.id} 
-            className="facility-card bg-white shadow-md rounded-lg p-6 transition-all duration-300 hover:shadow-lg"
-          >
+        {displayedResults.map((facility) => (
+          <div key={facility.id} className="facility-card bg-white shadow-md rounded-lg p-6">
+            {/* Facility card content */}
             <div className="flex flex-col md:flex-row md:items-start md:space-x-6">
               <div className="w-full md:w-1/4 mb-4 md:mb-0">
                 <img
@@ -147,14 +149,17 @@ export function SearchResultsPage() {
                       <Building2 className="h-4 w-4 mr-1" />
                       <span>{facility.location}</span>
                     </div>
+                    <FacilityDistance 
+                      facility={facility} 
+                      searchCoordinates={filters.coordinates}
+                    />
                   </div>
+                  
                   <div className="flex items-center space-x-2">
-                    <div 
-                      className={`px-3 py-1 rounded-full text-sm font-medium cursor-help
-                        ${facility.bedAvailability === 'yes' ? 'bg-green-100 text-green-800' :
-                          facility.bedAvailability === 'no' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'}`}
-                      title={formatLastUpdated(facility.updatedAt)}
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium
+                      ${facility.bedAvailability === 'yes' ? 'bg-green-100 text-green-800' :
+                        facility.bedAvailability === 'no' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'}`}
                     >
                       {facility.bedAvailability === 'yes' ? 'Beds Available' :
                        facility.bedAvailability === 'no' ? 'No Beds' : 'Unknown Availability'}
@@ -162,12 +167,14 @@ export function SearchResultsPage() {
                     <div className={`px-3 py-1 rounded-full text-sm font-medium
                       ${facility.matchPercentage >= 80 ? 'bg-green-100 text-green-800' :
                         facility.matchPercentage >= 50 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-orange-100 text-orange-800'}`}>
+                        'bg-orange-100 text-orange-800'}`}
+                    >
                       {facility.matchPercentage}% Match
                     </div>
                   </div>
                 </div>
 
+                {/* Contact Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <h3 className="font-medium text-gray-900 mb-2">Contact Information</h3>
@@ -202,6 +209,7 @@ export function SearchResultsPage() {
                     </div>
                   </div>
 
+                  {/* Facility Types */}
                   <div>
                     <h3 className="font-medium text-gray-900 mb-2">Facility Type</h3>
                     <div className="flex flex-wrap gap-2">
@@ -217,6 +225,7 @@ export function SearchResultsPage() {
                   </div>
                 </div>
 
+                {/* Services and Insurances */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h3 className="font-medium text-gray-900 mb-2">Insurances Accepted</h3>
@@ -269,7 +278,7 @@ export function SearchResultsPage() {
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors duration-200"
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
               {loadingMore ? (
                 <>
@@ -277,7 +286,7 @@ export function SearchResultsPage() {
                   Loading more...
                 </>
               ) : (
-                'Show 10 More'
+                'Show More Results'
               )}
             </button>
           </div>
@@ -290,7 +299,7 @@ export function SearchResultsPage() {
           state={filters}
           className="inline-flex items-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
-          Edit Search
+          Modify Search
         </Link>
       </div>
     </div>
