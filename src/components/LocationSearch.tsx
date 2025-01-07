@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader } from 'lucide-react';
 import { getCoordinatesFromSearch } from '../utils/geocoding';
 import type { Coordinates } from '../types';
@@ -13,19 +13,31 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [radius, setRadius] = useState(25);
-  const searchTimeout = useRef<number>();
+  const timeoutRef = useRef<number>();
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleLocationSearch = async (searchText: string) => {
     setLocation(searchText);
     setError(null);
 
-    if (!searchText.trim()) return;
-
-    if (searchTimeout.current) {
-      window.clearTimeout(searchTimeout.current);
+    if (!searchText.trim()) {
+      return;
     }
 
-    searchTimeout.current = window.setTimeout(async () => {
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Debounce the search
+    timeoutRef.current = window.setTimeout(async () => {
       setLoading(true);
       try {
         const coordinates = await getCoordinatesFromSearch(searchText);
@@ -33,14 +45,22 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
           onLocationSelect(searchText, coordinates, radius);
           setError(null);
         } else {
-          setError('Location not found. Please enter a more specific address.');
+          setError('Please enter a more specific location');
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Location search failed');
+        const message = err instanceof Error ? err.message : 'Error searching location';
+        setError(message);
       } finally {
         setLoading(false);
       }
-    }, 500);
+    }, 1000); // Increased debounce time
+  };
+
+  const handleRadiusChange = (newRadius: number) => {
+    setRadius(newRadius);
+    if (location.trim()) {
+      handleLocationSearch(location);
+    }
   };
 
   return (
@@ -56,7 +76,7 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
           type="text"
           value={location}
           onChange={(e) => handleLocationSearch(e.target.value)}
-          placeholder="Enter address, city, or ZIP code..."
+          placeholder="Enter a specific address, city, or ZIP code..."
           className="block w-full pl-10 pr-12 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
         />
         {loading && (
@@ -67,13 +87,13 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
       </div>
       
       {error && (
-        <p className="mt-2 text-sm text-red-600">{error}</p>
+        <p className="text-sm text-red-600">{error}</p>
       )}
 
       <select
         value={radius}
-        onChange={(e) => setRadius(Number(e.target.value))}
         className="mt-2 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+        onChange={(e) => handleRadiusChange(Number(e.target.value))}
       >
         <option value="5">Within 5 miles</option>
         <option value="10">Within 10 miles</option>
