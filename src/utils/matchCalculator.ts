@@ -2,19 +2,6 @@ import { calculateDistance } from './distance';
 import type { Facility, SearchFilters } from '../types';
 
 export function calculateMatchPercentage(facility: Facility, filters: SearchFilters): number {
-  // If there's a name filter and it doesn't match, return 0
-  if (filters.facilityName && !facility.name.toLowerCase().includes(filters.facilityName.toLowerCase())) {
-    return 0;
-  }
-
-  // If location is specified and facility is outside radius, return 0
-  if (filters.coordinates && facility.coordinates) {
-    const distance = calculateDistance(filters.coordinates, facility.coordinates);
-    if (filters.radius && distance > filters.radius) {
-      return 0;
-    }
-  }
-
   let totalWeight = 0;
   let matchedWeight = 0;
 
@@ -55,5 +42,51 @@ export function calculateMatchPercentage(facility: Facility, filters: SearchFilt
     }
   }
 
+  // Facility Name Match
+  if (filters.facilityName) {
+    totalWeight += 33.33;
+    if (facility.name.toLowerCase().includes(filters.facilityName.toLowerCase())) {
+      matchedWeight += 33.33;
+    }
+  }
+
   return totalWeight === 0 ? 100 : Math.round((matchedWeight / totalWeight) * 100);
+}
+
+export function filterAndSortFacilities(
+  facilities: Facility[],
+  filters: SearchFilters,
+  sortBy: 'match' | 'bedAvailability' | 'distance' = 'match'
+): (Facility & { matchPercentage: number })[] {
+  const results = facilities
+    .filter(facility => {
+      const matchPercentage = calculateMatchPercentage(facility, filters);
+      if (matchPercentage === 0) return false;
+      
+      if (filters.coordinates && facility.coordinates && filters.radius) {
+        const distance = calculateDistance(filters.coordinates, facility.coordinates);
+        return distance <= filters.radius;
+      }
+      
+      return true;
+    })
+    .map(facility => ({
+      ...facility,
+      matchPercentage: calculateMatchPercentage(facility, filters)
+    }));
+
+  return results.sort((a, b) => {
+    switch (sortBy) {
+      case 'match':
+        return b.matchPercentage - a.matchPercentage;
+      case 'bedAvailability':
+        const bedOrder = { yes: 0, unknown: 1, no: 2 };
+        return bedOrder[a.bedAvailability] - bedOrder[b.bedAvailability];
+      case 'distance':
+        if (!a.distance || !b.distance) return 0;
+        return a.distance - b.distance;
+      default:
+        return 0;
+    }
+  });
 }

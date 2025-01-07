@@ -43,12 +43,20 @@ export type FacilityType =
   | 'Home Services Provider'
   | 'Long Term Acute Care Hospital (LTACH)';
 
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
 export interface SearchFilters {
   facilityName: string;
   facilityTypes: FacilityType[];
   insurances: Insurance[];
   services: Service[];
   availableBeds: 'yes' | 'no' | 'any';
+  location?: string;
+  radius?: number;
+  coordinates?: Coordinates;
 }
 
 export interface Facility {
@@ -68,24 +76,12 @@ export interface Facility {
   services: Service[];
   bedAvailability: BedAvailability;
   updatedAt: string;
-  coordinates?: Coordinates; 
+  coordinates?: Coordinates;
+  matchPercentage?: number;
+  distance?: number;
 }
 
 export interface AuthState {
   isAuthenticated: boolean;
   facilities: Facility[];
-}
-export interface Coordinates {
-  lat: number;
-  lng: number;
-}
-export interface SearchFilters {
-  facilityName: string;
-  facilityTypes: FacilityType[];
-  insurances: Insurance[];
-  services: Service[];
-  availableBeds: 'yes' | 'no' | 'any';
-  location?: string;
-  radius?: number;
-  coordinates?: Coordinates;
 }

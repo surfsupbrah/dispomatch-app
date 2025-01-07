@@ -6,9 +6,10 @@ export type SortOption = 'match' | 'bedAvailability' | 'distance';
 interface SortControlsProps {
   sortBy: SortOption;
   onChange: (option: SortOption) => void;
+  showDistance?: boolean;
 }
 
-export function SortControls({ sortBy, onChange }: SortControlsProps) {
+export function SortControls({ sortBy, onChange, showDistance }: SortControlsProps) {
   return (
     <div className="flex items-center space-x-2 bg-white p-3 rounded-lg shadow-sm">
       <ArrowUpDown className="h-5 w-5 text-gray-400" />
@@ -20,7 +21,7 @@ export function SortControls({ sortBy, onChange }: SortControlsProps) {
       >
         <option value="match">% Match</option>
         <option value="bedAvailability">Bed Availability</option>
-        <option value="distance">Distance</option>
+        {showDistance && <option value="distance">Distance</option>}
       </select>
     </div>
   );
