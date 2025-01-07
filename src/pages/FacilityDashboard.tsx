@@ -3,7 +3,6 @@ import { Plus, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FacilityCard } from '../components/FacilityCard';
 import { useAuth } from '../context/AuthContext';
-import { updateFacilityCoordinates } from '../services/facilities';
 import type { Facility, BedAvailability } from '../types';
 
 export function FacilityDashboard() {
@@ -20,18 +19,16 @@ export function FacilityDashboard() {
   const updateAllCoordinates = async () => {
     setUpdating(true);
     try {
-      for (const facility of auth.facilities) {
-        try {
-          const coordinates = await updateFacilityCoordinates(facility);
-          console.log(`Updated coordinates for ${facility.name}:`, coordinates);
-        } catch (error) {
-          console.error(`Failed to update coordinates for ${facility.name}:`, error);
-        }
+      const response = await fetch('/coordinates', {
+        method: 'GET',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update coordinates');
       }
-      alert('Geolocation update completed.');
+      alert('Geolocation update process started. This may take a few minutes.');
     } catch (error) {
       console.error('Error updating coordinates:', error);
-      alert('Failed to update geolocations. Please try again.');
+      alert('Failed to start geolocation update. Please try again.');
     } finally {
       setUpdating(false);
     }
