@@ -10,9 +10,9 @@ interface LocationSearchProps {
 
 export function LocationSearch({ onLocationSelect, initialLocation = '' }: LocationSearchProps) {
   const [location, setLocation] = useState(initialLocation);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [radius, setRadius] = useState(25);
   const timeoutRef = useRef<number>();
 
   useEffect(() => {
@@ -27,8 +27,7 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
     setLocation(searchText);
     setError(null);
 
-    if (searchText.length < 3) {
-      setSuggestions([]);
+    if (!searchText.trim()) {
       return;
     }
 
@@ -41,10 +40,9 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
       try {
         const coordinates = await getCoordinatesFromSearch(searchText);
         if (coordinates) {
-          onLocationSelect(searchText, coordinates);
-          setSuggestions([]);
+          onLocationSelect(searchText, coordinates, radius);
         } else {
-          setError('Location not found. Please try a different search.');
+          setError('Please enter a valid Rhode Island address or ZIP code');
         }
       } catch (err) {
         setError('Error searching location. Please try again.');
@@ -52,6 +50,13 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
         setLoading(false);
       }
     }, 500);
+  };
+
+  const handleRadiusChange = (newRadius: number) => {
+    setRadius(newRadius);
+    if (location.trim()) {
+      handleLocationSearch(location);
+    }
   };
 
   return (
@@ -67,7 +72,7 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
           type="text"
           value={location}
           onChange={(e) => handleLocationSearch(e.target.value)}
-          placeholder="Enter address or ZIP code..."
+          placeholder="Enter Rhode Island address or ZIP code..."
           className="block w-full pl-10 pr-12 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
         />
         {loading && (
@@ -82,8 +87,9 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
       )}
 
       <select
+        value={radius}
         className="mt-2 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-        onChange={(e) => onLocationSelect(location, { lat: 0, lng: 0 }, Number(e.target.value))}
+        onChange={(e) => handleRadiusChange(Number(e.target.value))}
       >
         <option value="5">Within 5 miles</option>
         <option value="10">Within 10 miles</option>
