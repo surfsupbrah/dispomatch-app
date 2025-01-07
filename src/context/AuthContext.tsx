@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, hasValidCredentials } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { getFacilities, createFacility, updateFacility as updateFacilityInDb, deleteFacility as deleteFacilityInDb } from '../services/facilities';
 import type { AuthState, Facility } from '../types';
 
@@ -28,12 +28,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!hasValidCredentials()) {
-      setError('Please connect to Supabase using the "Connect to Supabase" button');
-      setLoading(false);
-      return;
+    async function loadFacilities() {
+      if (auth.isAuthenticated) {
+        try {
+          const facilities = await getFacilities();
+          setAuth(prev => ({ ...prev, facilities }));
+        } catch (err) {
+          console.error('Error loading facilities:', err);
+          setError('Failed to load facilities');
+        }
+      }
     }
 
+    loadFacilities();
+  }, [auth.isAuthenticated]);
+
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setAuth(prev => ({
         ...prev,
@@ -52,22 +62,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
     };
   }, [navigate]);
-
-  useEffect(() => {
-    async function loadFacilities() {
-      if (auth.isAuthenticated) {
-        try {
-          const facilities = await getFacilities();
-          setAuth(prev => ({ ...prev, facilities }));
-        } catch (err) {
-          console.error('Error loading facilities:', err);
-          setError('Failed to load facilities');
-        }
-      }
-    }
-
-    loadFacilities();
-  }, [auth.isAuthenticated]);
 
   const clearError = () => setError(null);
 
