@@ -12,4 +12,6 @@ if (!supabaseKey) {
   throw new Error('Missing VITE_SUPABASE_ANON_KEY environment variable');
 }
 
+export const hasValidCredentials = () => Boolean(supabaseUrl && supabaseKey);
+
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
