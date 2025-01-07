@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getCoordinatesFromSearch } from '../utils/geocoding';
-import type { Facility, SearchFilters } from '../types';
+import type { Facility } from '../types';
 
 export async function getFacilities() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -107,6 +107,26 @@ export async function deleteFacility(id: string) {
     .eq('user_id', user.id);
 
   if (error) throw error;
+}
+
+export async function updateFacilityCoordinates(facility: Facility) {
+  const coordinates = await getCoordinatesFromSearch(facility.location);
+  
+  if (!coordinates) {
+    throw new Error('Could not find coordinates for location');
+  }
+
+  const { error } = await supabase
+    .from('facilities')
+    .update({
+      latitude: coordinates.lat,
+      longitude: coordinates.lng
+    })
+    .eq('id', facility.id);
+
+  if (error) throw error;
+  
+  return coordinates;
 }
 
 function transformFacility(data: any): Facility {
