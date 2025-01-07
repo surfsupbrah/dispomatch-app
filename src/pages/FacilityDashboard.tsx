@@ -19,8 +19,8 @@ export function FacilityDashboard() {
   const updateAllCoordinates = async () => {
     setUpdating(true);
     try {
-      const response = await fetch('/coordinates', {
-        method: 'GET',
+      const response = await fetch('/api/coordinates', {
+        method: 'POST',
       });
       if (!response.ok) {
         throw new Error('Failed to update coordinates');
