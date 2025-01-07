@@ -10,10 +10,9 @@ export async function getCoordinatesFromSearch(query: string): Promise<Coordinat
   if (!query.trim()) return undefined;
   
   try {
-    // Make the query more flexible by not requiring exact state match
-    const encodedQuery = encodeURIComponent(`${query}, RI, USA`);
+    const encodedQuery = encodeURIComponent(`${query}, USA`);
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1&countrycodes=us&state=rhode%20island`,
+      `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1&countrycodes=us`,
       {
         headers: {
           'User-Agent': 'DispoMatch Healthcare Facility Finder'
@@ -32,18 +31,10 @@ export async function getCoordinatesFromSearch(query: string): Promise<Coordinat
       return undefined;
     }
 
-    const coords = {
+    return {
       lat: parseFloat(data[0].lat),
       lng: parseFloat(data[0].lon)
     };
-
-    // Validate the coordinates are within Rhode Island bounds
-    if (coords.lat >= 41.1 && coords.lat <= 42.1 && 
-        coords.lng >= -71.9 && coords.lng <= -71.1) {
-      return coords;
-    }
-
-    return undefined;
   } catch (error) {
     console.error('Geocoding error:', error);
     return undefined;

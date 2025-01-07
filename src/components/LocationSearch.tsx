@@ -42,7 +42,7 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
         if (coordinates) {
           onLocationSelect(searchText, coordinates, radius);
         } else {
-          setError('Please enter a valid Rhode Island address or ZIP code');
+          setError('Location not found. Please try a different search.');
         }
       } catch (err) {
         setError('Error searching location. Please try again.');
@@ -72,7 +72,7 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
           type="text"
           value={location}
           onChange={(e) => handleLocationSearch(e.target.value)}
-          placeholder="Enter Rhode Island address or ZIP code..."
+          placeholder="Enter address, city, or ZIP code..."
           className="block w-full pl-10 pr-12 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
         />
         {loading && (
