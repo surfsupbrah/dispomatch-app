@@ -7,6 +7,7 @@ import type { AuthState, Facility } from '../types';
 interface AuthContextType {
   auth: AuthState;
   login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateFacility: (facility: Facility) => Promise<void>;
   addFacility: (facility: Facility) => Promise<void>;
@@ -89,6 +90,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signup = async (email: string, password: string) => {
+    setError(null);
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (signUpError) {
+        throw new Error(signUpError.message);
+      }
+
+      if (!data.user || !data.session) {
+        throw new Error('Signup failed');
+      }
+
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to sign up');
+      throw err;
+    }
+  };
+
   const logout = async () => {
     setError(null);
     try {
@@ -158,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{ 
         auth, 
         login,
+        signup,
         logout, 
         updateFacility, 
         addFacility, 
