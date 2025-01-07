@@ -6,65 +6,54 @@ interface NominatimResponse {
   display_name: string;
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit, timeout = 5000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
+const RATE_LIMIT_DELAY = 1500; // 1.5 seconds between requests
+let lastRequestTime = 0;
+
+async function waitForRateLimit() {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
   
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(id);
-    return response;
-  } catch (err) {
-    clearTimeout(id);
-    throw err;
+  if (timeSinceLastRequest < RATE_LIMIT_DELAY) {
+    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY - timeSinceLastRequest));
   }
+  lastRequestTime = Date.now();
 }
 
 export async function getCoordinatesFromSearch(query: string): Promise<Coordinates | undefined> {
   if (!query.trim()) return undefined;
   
   try {
-    // Add proper delay to respect rate limits
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await waitForRateLimit();
     
     const encodedQuery = encodeURIComponent(query);
-    const response = await fetchWithTimeout(
-      `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1`,
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1&addressdetails=1`,
       {
         headers: {
-          'User-Agent': 'DispoMatch Healthcare Facility Finder (dispomatch@example.com)',
-          'Accept-Language': 'en'
-        },
-        mode: 'cors',
-        cache: 'no-cache'
+          'Accept': 'application/json',
+          'User-Agent': 'DispoMatch Healthcare Facility Finder'
+        }
       }
     );
     
     if (!response.ok) {
-      throw new Error('Location service temporarily unavailable');
+      throw new Error('Location service error');
     }
 
     const data = await response.json() as NominatimResponse[];
     
     if (data.length === 0) {
-      return undefined;
+      throw new Error('Location not found');
     }
 
-    const coordinates = {
+    return {
       lat: parseFloat(data[0].lat),
       lng: parseFloat(data[0].lon)
     };
-
-    if (isNaN(coordinates.lat) || isNaN(coordinates.lng)) {
-      throw new Error('Invalid coordinates received');
-    }
-
-    return coordinates;
   } catch (error) {
-    console.error('Geocoding error:', error);
-    throw new Error('Location service temporarily unavailable. Please try again later.');
+    if (error instanceof Error && error.message === 'Location not found') {
+      throw new Error('Location not found. Please try a more specific address.');
+    }
+    throw new Error('Unable to search location. Please try again.');
   }
 }
