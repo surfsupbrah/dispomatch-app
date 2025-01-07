@@ -6,11 +6,6 @@ interface NominatimResponse {
   display_name: string;
 }
 
-const NOMINATIM_ENDPOINTS = [
-  'https://nominatim.openstreetmap.org',
-  'https://nominatim.geocoding.ai',  // Fallback server
-];
-
 const RATE_LIMIT_DELAY = 1000;
 let lastRequestTime = 0;
 
@@ -23,73 +18,49 @@ async function waitForRateLimit() {
   lastRequestTime = Date.now();
 }
 
-async function tryFetch(url: string, options: RequestInit): Promise<Response> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        throw new Error('Request timed out');
-      }
-    }
-    throw error;
-  }
-}
-
 export async function getCoordinatesFromSearch(query: string): Promise<Coordinates | undefined> {
   if (!query.trim()) return undefined;
   
-  await waitForRateLimit();
-
-  const encodedQuery = encodeURIComponent(query);
-  
-  for (const baseUrl of NOMINATIM_ENDPOINTS) {
-    try {
-      const url = `${baseUrl}/search?q=${encodedQuery}&format=json&limit=1`;
-      
-      const response = await tryFetch(url, {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'DispoMatch Healthcare Facility Finder'
-        },
-        mode: 'cors',
-        cache: 'no-cache'
-      });
-      
-      if (!response.ok) {
-        continue; // Try next endpoint
+  try {
+    await waitForRateLimit();
+    
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'DispoMatch Healthcare Facility Finder (contact@dispomatch.com)'
       }
-
-      const data = await response.json() as NominatimResponse[];
-      
-      if (!data || data.length === 0) {
-        return undefined;
-      }
-
-      const coordinates = {
-        lat: parseFloat(data[0].lat),
-        lng: parseFloat(data[0].lon)
-      };
-
-      if (isNaN(coordinates.lat) || isNaN(coordinates.lng)) {
-        continue; // Try next endpoint
-      }
-
-      return coordinates;
-    } catch (error) {
-      console.error(`Error with endpoint ${baseUrl}:`, error);
-      continue; // Try next endpoint
+    });
+    
+    if (!response.ok) {
+      console.error('Nominatim API error:', response.status, response.statusText);
+      throw new Error('Location service temporarily unavailable');
     }
-  }
 
-  throw new Error('Location service unavailable. Please try again later.');
+    const data = await response.json() as NominatimResponse[];
+    
+    if (!data || data.length === 0) {
+      return undefined;
+    }
+
+    const coordinates = {
+      lat: parseFloat(data[0].lat),
+      lng: parseFloat(data[0].lon)
+    };
+
+    // Validate coordinates
+    if (isNaN(coordinates.lat) || isNaN(coordinates.lng)) {
+      throw new Error('Invalid coordinates received');
+    }
+
+    return coordinates;
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+    throw new Error('Unable to process location search');
+  }
 }
