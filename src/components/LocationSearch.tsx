@@ -31,25 +31,29 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
       return;
     }
 
+    // Clear any existing timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
+    // Debounce the search
     timeoutRef.current = window.setTimeout(async () => {
       setLoading(true);
       try {
         const coordinates = await getCoordinatesFromSearch(searchText);
         if (coordinates) {
           onLocationSelect(searchText, coordinates, radius);
+          setError(null);
         } else {
-          setError('Location not found. Please try a different search.');
+          setError('Please enter a more specific location');
         }
       } catch (err) {
-        setError('Error searching location. Please try again.');
+        const message = err instanceof Error ? err.message : 'Error searching location';
+        setError(message);
       } finally {
         setLoading(false);
       }
-    }, 500);
+    }, 1000); // Increased debounce time
   };
 
   const handleRadiusChange = (newRadius: number) => {
@@ -72,7 +76,7 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
           type="text"
           value={location}
           onChange={(e) => handleLocationSearch(e.target.value)}
-          placeholder="Enter address, city, or ZIP code..."
+          placeholder="Enter a specific address, city, or ZIP code..."
           className="block w-full pl-10 pr-12 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
         />
         {loading && (
@@ -95,6 +99,7 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
         <option value="10">Within 10 miles</option>
         <option value="25">Within 25 miles</option>
         <option value="50">Within 50 miles</option>
+        <option value="100">Within 100 miles</option>
       </select>
     </div>
   );
