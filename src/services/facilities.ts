@@ -1,39 +1,73 @@
 import { supabase } from '../lib/supabase';
-import { getCoordinatesFromSearch } from '../utils/geocoding';
 import type { Facility } from '../types';
 
 export async function getFacilities() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Authentication required');
+    }
 
-  const { data, error } = await supabase
-    .from('facilities')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('name');
+    const { data, error, status } = await supabase
+      .from('facilities')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('name');
 
-  if (error) throw error;
+    if (error) {
+      if (status === 401) {
+        throw new Error('Authentication required');
+      }
+      console.error('Database error:', error);
+      throw new Error('Failed to fetch facilities');
+    }
 
-  return transformFacilities(data);
+    if (!data) {
+      throw new Error('No data received from database');
+    }
+
+    return transformFacilities(data);
+  } catch (error) {
+    console.error('getFacilities error:', error);
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+    throw new Error('Failed to load facilities');
+  }
 }
 
 export async function searchFacilities() {
-  const { data, error } = await supabase
-    .from('facilities')
-    .select('*')
-    .order('name');
+  try {
+    const { data, error, status } = await supabase
+      .from('facilities')
+      .select('*')
+      .order('name');
 
-  if (error) throw error;
+    if (error) {
+      if (status === 401) {
+        throw new Error('Authentication required');
+      }
+      console.error('Database error:', error);
+      throw new Error('Failed to fetch facilities');
+    }
 
-  return transformFacilities(data);
+    if (!data) {
+      throw new Error('No data received from database');
+    }
+
+    return transformFacilities(data);
+  } catch (error) {
+    console.error('searchFacilities error:', error);
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+    throw new Error('Failed to load facilities');
+  }
 }
 
 export async function createFacility(facility: Omit<Facility, 'id' | 'updatedAt'>) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-
-  // Get coordinates for the facility location
-  const coordinates = await getCoordinatesFromSearch(facility.location);
 
   const { data, error } = await supabase
     .from('facilities')
@@ -42,8 +76,6 @@ export async function createFacility(facility: Omit<Facility, 'id' | 'updatedAt'
       name: facility.name,
       type: facility.type,
       location: facility.location,
-      latitude: coordinates?.lat,
-      longitude: coordinates?.lng,
       phone: facility.phone,
       fax: facility.fax,
       contact_name: facility.contact.name,
@@ -52,7 +84,9 @@ export async function createFacility(facility: Omit<Facility, 'id' | 'updatedAt'
       image_url: facility.imageUrl,
       insurances: facility.insurances,
       services: facility.services,
-      bed_availability: facility.bedAvailability
+      bed_availability: facility.bedAvailability,
+      latitude: facility.coordinates?.lat,
+      longitude: facility.coordinates?.lng
     }])
     .select()
     .single();
@@ -66,22 +100,12 @@ export async function updateFacility(id: string, facility: Partial<Omit<Facility
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // Only get new coordinates if location changed
-  let coordinates;
-  if (facility.location) {
-    coordinates = await getCoordinatesFromSearch(facility.location);
-  }
-
   const { data, error } = await supabase
     .from('facilities')
     .update({
       name: facility.name,
       type: facility.type,
       location: facility.location,
-      ...(coordinates && {
-        latitude: coordinates.lat,
-        longitude: coordinates.lng
-      }),
       phone: facility.phone,
       fax: facility.fax,
       contact_name: facility.contact?.name,
@@ -90,7 +114,9 @@ export async function updateFacility(id: string, facility: Partial<Omit<Facility
       image_url: facility.imageUrl,
       insurances: facility.insurances,
       services: facility.services,
-      bed_availability: facility.bedAvailability
+      bed_availability: facility.bedAvailability,
+      latitude: facility.coordinates?.lat,
+      longitude: facility.coordinates?.lng
     })
     .eq('id', id)
     .eq('user_id', user.id)
@@ -121,10 +147,6 @@ function transformFacility(data: any): Facility {
     name: data.name,
     type: data.type,
     location: data.location,
-    coordinates: data.latitude && data.longitude ? {
-      lat: data.latitude,
-      lng: data.longitude
-    } : undefined,
     phone: data.phone,
     fax: data.fax,
     contact: {
@@ -137,6 +159,10 @@ function transformFacility(data: any): Facility {
     services: data.services,
     bedAvailability: data.bed_availability,
     updatedAt: data.updated_at,
+    coordinates: data.latitude && data.longitude ? {
+      lat: data.latitude,
+      lng: data.longitude
+    } : undefined
   };
 }
 
