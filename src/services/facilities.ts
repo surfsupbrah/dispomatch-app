@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getCoordinatesFromSearch } from '../utils/geocoding';
-import type { Facility } from '../types';
+import type { Facility, SearchFilters } from '../types';
 
 export async function getFacilities() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -13,7 +13,6 @@ export async function getFacilities() {
     .order('name');
 
   if (error) throw error;
-
   return transformFacilities(data);
 }
 
@@ -24,7 +23,6 @@ export async function searchFacilities() {
     .order('name');
 
   if (error) throw error;
-
   return transformFacilities(data);
 }
 
@@ -32,7 +30,6 @@ export async function createFacility(facility: Omit<Facility, 'id' | 'updatedAt'
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // Get coordinates for the facility location
   const coordinates = await getCoordinatesFromSearch(facility.location);
 
   const { data, error } = await supabase
@@ -58,7 +55,6 @@ export async function createFacility(facility: Omit<Facility, 'id' | 'updatedAt'
     .single();
 
   if (error) throw error;
-
   return transformFacility(data);
 }
 
@@ -66,7 +62,6 @@ export async function updateFacility(id: string, facility: Partial<Omit<Facility
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // Only get new coordinates if location changed
   let coordinates;
   if (facility.location) {
     coordinates = await getCoordinatesFromSearch(facility.location);
@@ -98,7 +93,6 @@ export async function updateFacility(id: string, facility: Partial<Omit<Facility
     .single();
 
   if (error) throw error;
-
   return transformFacility(data);
 }
 
