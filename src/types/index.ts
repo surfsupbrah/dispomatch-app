@@ -44,6 +44,7 @@ export type FacilityType =
   | 'Long Term Acute Care Hospital (LTACH)';
 
 export interface SearchFilters {
+  facilityName: string;
   facilityTypes: FacilityType[];
   insurances: Insurance[];
   services: Service[];

@@ -1,6 +1,11 @@
 import type { Facility, SearchFilters } from '../types';
 
 export function calculateMatchPercentage(facility: Facility, filters: SearchFilters): number {
+  // If there's a name filter and it doesn't match, return 0
+  if (filters.facilityName && !facility.name.toLowerCase().includes(filters.facilityName.toLowerCase())) {
+    return 0;
+  }
+
   let totalWeight = 0;
   let matchedWeight = 0;
 
