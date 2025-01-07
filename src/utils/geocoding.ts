@@ -3,9 +3,12 @@ import type { Coordinates } from '../types';
 interface NominatimResponse {
   lat: string;
   lon: string;
+  display_name: string;
 }
 
-async function searchNominatim(query: string): Promise<Coordinates | undefined> {
+export async function getCoordinatesFromSearch(query: string): Promise<Coordinates | undefined> {
+  if (!query) return undefined;
+  
   try {
     const encodedQuery = encodeURIComponent(query);
     const response = await fetch(
@@ -23,22 +26,16 @@ async function searchNominatim(query: string): Promise<Coordinates | undefined> 
 
     const data = await response.json() as NominatimResponse[];
     
-    if (data.length > 0) {
-      return {
-        lat: parseFloat(data[0].lat),
-        lng: parseFloat(data[0].lon)
-      };
+    if (data.length === 0) {
+      return undefined;
     }
-    
-    return undefined;
+
+    return {
+      lat: parseFloat(data[0].lat),
+      lng: parseFloat(data[0].lon)
+    };
   } catch (error) {
     console.error('Geocoding error:', error);
     return undefined;
   }
-}
-
-export async function getCoordinatesFromSearch(searchString: string): Promise<Coordinates | undefined> {
-  if (!searchString) return undefined;
-  
-  return searchNominatim(searchString);
 }
