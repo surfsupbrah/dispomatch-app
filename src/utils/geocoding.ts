@@ -6,13 +6,12 @@ interface NominatimResponse {
   display_name: string;
 }
 
-const RATE_LIMIT_DELAY = 1500; // 1.5 seconds between requests
+const RATE_LIMIT_DELAY = 1000;
 let lastRequestTime = 0;
 
 async function waitForRateLimit() {
   const now = Date.now();
   const timeSinceLastRequest = now - lastRequestTime;
-  
   if (timeSinceLastRequest < RATE_LIMIT_DELAY) {
     await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY - timeSinceLastRequest));
   }
@@ -26,34 +25,42 @@ export async function getCoordinatesFromSearch(query: string): Promise<Coordinat
     await waitForRateLimit();
     
     const encodedQuery = encodeURIComponent(query);
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1&addressdetails=1`,
-      {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'DispoMatch Healthcare Facility Finder'
-        }
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'DispoMatch Healthcare Facility Finder (contact@dispomatch.com)'
       }
-    );
+    });
     
     if (!response.ok) {
-      throw new Error('Location service error');
+      console.error('Nominatim API error:', response.status, response.statusText);
+      throw new Error('Location service temporarily unavailable');
     }
 
     const data = await response.json() as NominatimResponse[];
     
-    if (data.length === 0) {
-      throw new Error('Location not found');
+    if (!data || data.length === 0) {
+      return undefined;
     }
 
-    return {
+    const coordinates = {
       lat: parseFloat(data[0].lat),
       lng: parseFloat(data[0].lon)
     };
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Location not found') {
-      throw new Error('Location not found. Please try a more specific address.');
+
+    // Validate coordinates
+    if (isNaN(coordinates.lat) || isNaN(coordinates.lng)) {
+      throw new Error('Invalid coordinates received');
     }
-    throw new Error('Unable to search location. Please try again.');
+
+    return coordinates;
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+    throw new Error('Unable to process location search');
   }
 }
