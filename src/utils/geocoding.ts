@@ -7,12 +7,13 @@ interface NominatimResponse {
 }
 
 export async function getCoordinatesFromSearch(query: string): Promise<Coordinates | undefined> {
-  if (!query) return undefined;
+  if (!query.trim()) return undefined;
   
   try {
-    const encodedQuery = encodeURIComponent(query);
+    // Add state=RI to limit results to Rhode Island
+    const encodedQuery = encodeURIComponent(`${query}, Rhode Island`);
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1&countrycodes=us`,
+      `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1&state=RI`,
       {
         headers: {
           'User-Agent': 'DispoMatch Healthcare Facility Finder'
