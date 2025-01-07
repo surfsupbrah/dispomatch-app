@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, MapPin } from 'lucide-react';
+import React from 'react';
+import { Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FacilityCard } from '../components/FacilityCard';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +7,6 @@ import type { Facility, BedAvailability } from '../types';
 
 export function FacilityDashboard() {
   const { auth, updateFacility } = useAuth();
-  const [updating, setUpdating] = useState(false);
 
   const handleBedAvailabilityChange = (facilityId: string, availability: BedAvailability) => {
     const facility = auth.facilities.find(f => f.id === facilityId);
@@ -16,45 +15,17 @@ export function FacilityDashboard() {
     }
   };
 
-  const updateAllCoordinates = async () => {
-    setUpdating(true);
-    try {
-      const response = await fetch('/api/coordinates', {
-        method: 'POST',
-      });
-      if (!response.ok) {
-        throw new Error('Failed to update coordinates');
-      }
-      alert('Geolocation update process started. This may take a few minutes.');
-    } catch (error) {
-      console.error('Error updating coordinates:', error);
-      alert('Failed to start geolocation update. Please try again.');
-    } finally {
-      setUpdating(false);
-    }
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="mb-8 flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Manage Facilities</h1>
-        <div className="flex gap-4">
-          <button
-            onClick={updateAllCoordinates}
-            disabled={updating}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
-          >
-            <MapPin className="h-5 w-5 mr-2" />
-            {updating ? 'Updating...' : 'Update Geolocation'}
-          </button>
-          <Link
-            to="/facility/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Add Facility
-          </Link>
-        </div>
+        <Link
+          to="/facility/new"
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Add Facility
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
