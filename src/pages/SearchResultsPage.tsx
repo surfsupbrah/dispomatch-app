@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Building2, Phone, Mail, User, Printer, Loader } from 'lucide-react';
-import type { SearchFilters, Service, Facility } from '../types';
-import { calculateMatchPercentage } from '../utils/matchCalculator';
 import { SortControls, type SortOption } from '../components/SortControls';
 import { searchFacilities } from '../services/facilities';
+import { filterAndSortFacilities } from '../utils/matchCalculator';
 import { formatLastUpdated } from '../utils/dateFormatter';
 import { getCoordinatesFromSearch } from '../utils/geocoding';
 import { calculateDistance } from '../utils/distance';
-import { filterAndSortFacilities } from '../utils/matchCalculator';
-
+import type { SearchFilters, Facility } from '../types';
 
 const RESULTS_PER_PAGE = 10;
 
@@ -25,10 +23,16 @@ export function SearchResultsPage() {
 
   useEffect(() => {
     async function loadFacilities() {
+      if (!filters) {
+        setError('No search filters provided');
+        setLoading(false);
+        return;
+      }
+
       try {
         const data = await searchFacilities();
         
-        if (filters.location) {
+        if (filters.location && filters.location.trim() !== '') {
           const searchCoords = await getCoordinatesFromSearch(filters.location);
           if (searchCoords) {
             filters.coordinates = searchCoords;
@@ -45,42 +49,29 @@ export function SearchResultsPage() {
             );
             
             setFacilities(facilitiesWithCoords);
+          } else {
+            setFacilities(data);
           }
         } else {
           setFacilities(data);
         }
       } catch (err) {
         console.error('Error loading facilities:', err);
-        setError('Failed to load facilities');
+        setError('Failed to load facilities. Please try again.');
       } finally {
         setLoading(false);
       }
     }
 
     loadFacilities();
-  }, [filters.location]);
-
-  const results = filterAndSortFacilities(facilities, filters, sortBy);
-  const hasMore = displayCount < results.length;
-
-  const handleLoadMore = async () => {
-    setLoadingMore(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setDisplayCount(prev => prev + RESULTS_PER_PAGE);
-    setLoadingMore(false);
-    
-    const lastItem = document.querySelector('.facility-card:last-child');
-    if (lastItem) {
-      lastItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
+  }, [filters]);
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading results...</p>
+          <Loader className="h-12 w-12 animate-spin text-indigo-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading facilities...</p>
         </div>
       </div>
     );
@@ -103,7 +94,17 @@ export function SearchResultsPage() {
     );
   }
 
+  const results = filterAndSortFacilities(facilities, filters, sortBy);
   const displayedResults = results.slice(0, displayCount);
+  const hasMore = displayCount < results.length;
+
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    setTimeout(() => {
+      setDisplayCount(prev => prev + RESULTS_PER_PAGE);
+      setLoadingMore(false);
+    }, 500);
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -117,8 +118,8 @@ export function SearchResultsPage() {
         </div>
         <SortControls 
           sortBy={sortBy} 
-          onChange={setSortBy} 
-          showDistance={!!filters.coordinates}
+          onChange={setSortBy}
+          showDistance={!!filters.coordinates} 
         />
       </div>
 
@@ -144,9 +145,9 @@ export function SearchResultsPage() {
                     <div className="flex items-center text-gray-600 mt-1">
                       <Building2 className="h-4 w-4 mr-1" />
                       <span>{facility.location}</span>
-                      {filters.coordinates && facility.coordinates && (
+                      {facility.distance !== undefined && (
                         <span className="ml-2 text-sm text-gray-500">
-                          ({facility.distance?.toFixed(1)} miles away)
+                          ({facility.distance.toFixed(1)} miles away)
                         </span>
                       )}
                     </div>
@@ -238,13 +239,13 @@ export function SearchResultsPage() {
                   <div>
                     <h3 className="font-medium text-gray-900 mb-2">Services Offered</h3>
                     <div className="flex flex-wrap gap-2">
-                    {facility.services.map((service: Service) => (
-  <span
-    key={service}
-    className="px-2 py-1 bg-purple-100 text-purple-800 text-sm rounded"
-  >
-    {service}
-  </span>
+                      {facility.services.map(service => (
+                        <span
+                          key={service}
+                          className="px-2 py-1 bg-purple-100 text-purple-800 text-sm rounded"
+                        >
+                          {service}
+                        </span>
                       ))}
                     </div>
                   </div>
