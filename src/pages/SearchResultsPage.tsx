@@ -2,19 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Building2, Phone, Mail, User, Printer, Loader } from 'lucide-react';
 import { SortControls, type SortOption } from '../components/SortControls';
+import { FilterControls, type FilterOption } from '../components/FilterControls';
 import { searchFacilities } from '../services/facilities';
 import { filterAndSortFacilities } from '../utils/matchCalculator';
 import { formatLastUpdated } from '../utils/dateFormatter';
 import { getCoordinatesFromSearch } from '../utils/geocoding';
 import { calculateDistance } from '../utils/distance';
-import type { SearchFilters, Facility } from '../types';
+import type { SearchFilters, Facility, FacilityWithMatch } from '../types';
 
 const RESULTS_PER_PAGE = 10;
+const HOURS_24 = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 export function SearchResultsPage() {
   const location = useLocation();
   const filters = location.state as SearchFilters;
   const [sortBy, setSortBy] = useState<SortOption>('match');
+  const [activeFilters, setActiveFilters] = useState<FilterOption[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -36,7 +39,6 @@ export function SearchResultsPage() {
           const searchCoords = await getCoordinatesFromSearch(filters.location);
           if (searchCoords) {
             filters.coordinates = searchCoords;
-            // Calculate distance for each facility using database coordinates
             const facilitiesWithDistance = data.map(facility => ({
               ...facility,
               distance: facility.coordinates && searchCoords ? 
@@ -60,6 +62,36 @@ export function SearchResultsPage() {
 
     loadFacilities();
   }, [filters]);
+
+  const applyFilters = (results: FacilityWithMatch[]) => {
+    return results.filter(facility => {
+      // Apply bed availability filter
+      if (activeFilters.includes('bedsAvailable') && facility.bedAvailability !== 'yes') {
+        return false;
+      }
+
+      // Apply distance filters
+      if (facility.distance !== undefined) {
+        if (activeFilters.includes('within5Miles') && facility.distance > 5) {
+          return false;
+        }
+        if (activeFilters.includes('within10Miles') && facility.distance > 10) {
+          return false;
+        }
+      }
+
+      // Apply recent update filter
+      if (activeFilters.includes('recentlyUpdated')) {
+        const updatedAt = new Date(facility.updatedAt).getTime();
+        const now = new Date().getTime();
+        if (now - updatedAt > HOURS_24) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  };
 
   if (loading) {
     return (
@@ -89,9 +121,9 @@ export function SearchResultsPage() {
     );
   }
 
-  const results = filterAndSortFacilities(facilities, filters, sortBy);
-  const displayedResults = results.slice(0, displayCount);
-  const hasMore = displayCount < results.length;
+  const filteredResults = applyFilters(filterAndSortFacilities(facilities, filters, sortBy));
+  const displayedResults = filteredResults.slice(0, displayCount);
+  const hasMore = displayCount < filteredResults.length;
 
   const handleLoadMore = () => {
     setLoadingMore(true);
@@ -107,15 +139,21 @@ export function SearchResultsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Search Results</h1>
           <p className="text-gray-600">
-            Found {results.length} matching facilities
-            {results.length > 0 && ` (Showing ${Math.min(displayCount, results.length)})`}
+            Found {filteredResults.length} matching facilities
+            {filteredResults.length > 0 && ` (Showing ${Math.min(displayCount, filteredResults.length)})`}
           </p>
         </div>
-        <SortControls 
-          sortBy={sortBy} 
-          onChange={setSortBy}
-          showDistance={!!filters.coordinates} 
-        />
+        <div className="flex items-center space-x-4">
+          <FilterControls
+            selectedFilters={activeFilters}
+            onFilterChange={setActiveFilters}
+          />
+          <SortControls 
+            sortBy={sortBy} 
+            onChange={setSortBy}
+            showDistance={!!filters.coordinates} 
+          />
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -250,7 +288,7 @@ export function SearchResultsPage() {
           </div>
         ))}
 
-        {results.length === 0 && (
+        {filteredResults.length === 0 && (
           <div className="text-center py-12 bg-white rounded-lg shadow">
             <h3 className="text-lg font-medium text-gray-900 mb-2">No matching facilities found</h3>
             <p className="text-gray-500 mb-4">Try adjusting your search criteria</p>

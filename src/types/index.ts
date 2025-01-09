@@ -77,8 +77,11 @@ export interface Facility {
   bedAvailability: BedAvailability;
   updatedAt: string;
   coordinates?: Coordinates;
-  matchPercentage?: number;
   distance?: number;
+}
+
+export interface FacilityWithMatch extends Facility {
+  matchPercentage: number;
 }
 
 export interface AuthState {

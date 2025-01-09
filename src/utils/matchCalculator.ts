@@ -1,6 +1,10 @@
 import { calculateDistance } from './distance';
 import type { Facility, SearchFilters } from '../types';
 
+interface FacilityWithMatch extends Facility {
+  matchPercentage: number;
+}
+
 export function calculateMatchPercentage(facility: Facility, filters: SearchFilters): number {
   let totalWeight = 0;
   let matchedWeight = 0;
@@ -57,7 +61,7 @@ export function filterAndSortFacilities(
   facilities: Facility[],
   filters: SearchFilters,
   sortBy: 'match' | 'bedAvailability' | 'distance' = 'match'
-): (Facility & { matchPercentage: number })[] {
+): FacilityWithMatch[] {
   const results = facilities
     .filter(facility => {
       // Check if facility matches the basic criteria
