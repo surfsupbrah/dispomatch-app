@@ -6,6 +6,7 @@ import { searchFacilities } from '../services/facilities';
 import { filterAndSortFacilities } from '../utils/matchCalculator';
 import { formatLastUpdated } from '../utils/dateFormatter';
 import { getCoordinatesFromSearch } from '../utils/geocoding';
+import { calculateDistance } from '../utils/distance';
 import type { SearchFilters, Facility } from '../types';
 
 const RESULTS_PER_PAGE = 10;
@@ -35,7 +36,14 @@ export function SearchResultsPage() {
           const searchCoords = await getCoordinatesFromSearch(filters.location);
           if (searchCoords) {
             filters.coordinates = searchCoords;
-            setFacilities(data);
+            // Calculate distance for each facility using database coordinates
+            const facilitiesWithDistance = data.map(facility => ({
+              ...facility,
+              distance: facility.coordinates && searchCoords ? 
+                calculateDistance(searchCoords, facility.coordinates) : 
+                undefined
+            }));
+            setFacilities(facilitiesWithDistance);
           } else {
             setFacilities(data);
           }
