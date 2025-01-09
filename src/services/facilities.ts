@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getCoordinatesFromSearch } from '../utils/geocoding';
-import type { Facility, SearchFilters } from '../types';
+import type { Facility } from '../types';
 
 export async function getFacilities() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -19,7 +19,11 @@ export async function getFacilities() {
 export async function searchFacilities() {
   const { data, error } = await supabase
     .from('facilities')
-    .select('*')
+    .select(`
+      *,
+      latitude,
+      longitude
+    `)
     .order('name');
 
   if (error) throw error;
