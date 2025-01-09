@@ -60,9 +60,11 @@ export function filterAndSortFacilities(
 ): (Facility & { matchPercentage: number })[] {
   const results = facilities
     .filter(facility => {
+      // Check if facility matches the basic criteria
       const matchPercentage = calculateMatchPercentage(facility, filters);
       if (matchPercentage === 0) return false;
       
+      // Filter by distance if coordinates and radius are provided
       if (filters.coordinates && facility.coordinates && filters.radius) {
         const distance = calculateDistance(filters.coordinates, facility.coordinates);
         return distance <= filters.radius;

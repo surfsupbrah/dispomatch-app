@@ -72,8 +72,18 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
 
       <select
         value={radius}
-        onChange={(e) => setRadius(Number(e.target.value))}
-        className="mt-2 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+        onChange={(e) => {
+          const newRadius = Number(e.target.value);
+          setRadius(newRadius);
+          if (location.trim()) {
+            getCoordinatesFromSearch(location).then(coordinates => {
+              if (coordinates) {
+                onLocationSelect(location, coordinates, newRadius);
+              }
+            });
+          }
+        }}
+        className="mt-2 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white shadow-sm"
       >
         <option value="5">Within 5 miles</option>
         <option value="10">Within 10 miles</option>
