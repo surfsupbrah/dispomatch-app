@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Loader } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { getCoordinatesFromSearch } from '../utils/geocoding';
 import type { Coordinates } from '../types';
 
@@ -135,7 +135,7 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
         />
         {loading && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-            <Loader className="h-5 w-5 text-gray-400 animate-spin" />
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
           </div>
         )}
 
