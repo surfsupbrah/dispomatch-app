@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Loader } from 'lucide-react';
+import { MapPin, Loader, Ruler } from 'lucide-react';
 import { getCoordinatesFromSearch } from '../utils/geocoding';
 import type { Coordinates } from '../types';
 
@@ -23,13 +23,18 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
   const [radius, setRadius] = useState(25);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showRadiusMenu, setShowRadiusMenu] = useState(false);
   const searchTimeout = useRef<number>();
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const radiusDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
+      }
+      if (radiusDropdownRef.current && !radiusDropdownRef.current.contains(event.target as Node)) {
+        setShowRadiusMenu(false);
       }
     }
 
@@ -116,82 +121,103 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
     }
   };
 
+  const handleRadiusSelect = async (newRadius: number) => {
+    setRadius(newRadius);
+    setShowRadiusMenu(false);
+    if (location.trim()) {
+      const coordinates = await getCoordinatesFromSearch(location);
+      if (coordinates) {
+        onLocationSelect(location, coordinates, newRadius);
+      }
+    }
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       <label className="block text-sm font-medium text-gray-700">
         Search by Location
       </label>
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <MapPin className="h-5 w-5 text-gray-400" />
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <MapPin className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            value={location}
+            onChange={(e) => handleLocationSearch(e.target.value)}
+            onFocus={() => location.trim().length >= 3 && setShowSuggestions(true)}
+            placeholder="Enter address, city, or ZIP code..."
+            className="block w-full pl-10 pr-12 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+          />
+          {loading && (
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+              <Loader className="h-5 w-5 text-gray-400 animate-spin" />
+            </div>
+          )}
+
+          {showSuggestions && suggestions.length > 0 && (
+            <div
+              ref={suggestionsRef}
+              className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
+            >
+              {suggestions.map((suggestion, index) => {
+                const address = [
+                  suggestion.street,
+                  suggestion.city,
+                  suggestion.state,
+                  suggestion.postcode
+                ].filter(Boolean).join(', ');
+
+                return (
+                  <div
+                    key={index}
+                    className="cursor-pointer hover:bg-gray-100 px-4 py-2"
+                    onClick={() => handleSuggestionSelect(suggestion)}
+                  >
+                    <p className="text-sm text-gray-900">{address}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-        <input
-          type="text"
-          value={location}
-          onChange={(e) => handleLocationSearch(e.target.value)}
-          onFocus={() => location.trim().length >= 3 && setShowSuggestions(true)}
-          placeholder="Enter address, city, or ZIP code..."
-          className="block w-full pl-10 pr-12 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-        />
-        {loading && (
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-            <Loader className="h-5 w-5 text-gray-400 animate-spin" />
-          </div>
-        )}
 
-        {/* Suggestions dropdown */}
-        {showSuggestions && suggestions.length > 0 && (
-          <div
-            ref={suggestionsRef}
-            className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
+        <div ref={radiusDropdownRef} className="relative">
+          <button
+            onClick={() => setShowRadiusMenu(!showRadiusMenu)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            {suggestions.map((suggestion, index) => {
-              const address = [
-                suggestion.street,
-                suggestion.city,
-                suggestion.state,
-                suggestion.postcode
-              ].filter(Boolean).join(', ');
+            <Ruler className="h-4 w-4 mr-2" />
+            <span>Within {radius} miles</span>
+          </button>
 
-              return (
-                <div
-                  key={index}
-                  className="cursor-pointer hover:bg-gray-100 px-4 py-2"
-                  onClick={() => handleSuggestionSelect(suggestion)}
-                >
-                  <p className="text-sm text-gray-900">{address}</p>
-                </div>
-              );
-            })}
-          </div>
-        )}
+          {showRadiusMenu && (
+            <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+              <div className="py-1" role="menu">
+                {[5, 10, 25, 50, 100].map((value) => (
+                  <button
+                    key={value}
+                    onClick={() => handleRadiusSelect(value)}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      radius === value
+                        ? 'bg-indigo-50 text-indigo-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    role="menuitem"
+                  >
+                    Within {value} miles
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       
       {error && (
         <p className="mt-2 text-sm text-red-600">{error}</p>
       )}
-
-      <select
-        value={radius}
-        onChange={(e) => {
-          const newRadius = Number(e.target.value);
-          setRadius(newRadius);
-          if (location.trim()) {
-            getCoordinatesFromSearch(location).then(coordinates => {
-              if (coordinates) {
-                onLocationSelect(location, coordinates, newRadius);
-              }
-            });
-          }
-        }}
-        className="mt-2 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white shadow-sm"
-      >
-        <option value="5">Within 5 miles</option>
-        <option value="10">Within 10 miles</option>
-        <option value="25">Within 25 miles</option>
-        <option value="50">Within 50 miles</option>
-        <option value="100">Within 100 miles</option>
-      </select>
     </div>
   );
 }
