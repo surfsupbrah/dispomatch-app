@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MapPin, Loader } from 'lucide-react';
-import { getCoordinatesFromSearch } from '../utils/geocoding';
 import type { Coordinates } from '../types';
 
 interface LocationSearchProps {
@@ -8,111 +7,61 @@ interface LocationSearchProps {
   initialLocation?: string;
 }
 
-interface Suggestion {
-  name: string;
-  state: string;
-  city: string;
-  street: string;
-  postcode: string;
-}
-
 export function LocationSearch({ onLocationSelect, initialLocation = '' }: LocationSearchProps) {
   const [location, setLocation] = useState(initialLocation);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [radius, setRadius] = useState(25);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const searchTimeout = useRef<number>();
-  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
+    if (!inputRef.current) return;
+
+    const options: google.maps.places.AutocompleteOptions = {
+      componentRestrictions: { country: 'us' },
+      fields: ['formatted_address', 'geometry'],
+      types: ['address']
+    };
+
+    autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, options);
+
+    autocompleteRef.current.addListener('place_changed', () => {
+      const place = autocompleteRef.current?.getPlace();
+      
+      if (!place?.geometry?.location) {
+        setError('Please select a valid address from the dropdown');
+        return;
       }
-    }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+      const coordinates = {
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng()
+      };
 
-  const fetchSuggestions = async (query: string) => {
-    if (!query.trim() || query.length < 3) {
-      setSuggestions([]);
-      return;
-    }
+      setLocation(place.formatted_address || '');
+      onLocationSelect(place.formatted_address || '', coordinates, radius);
+      setError(null);
+    });
 
-    try {
-      const response = await fetch(
-        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lang=en`,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'DispoMatch Healthcare Facility Finder'
-          }
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to fetch suggestions');
-
-      const data = await response.json();
-      const formattedSuggestions = data.features.map((feature: any) => ({
-        name: feature.properties.name,
-        state: feature.properties.state,
-        city: feature.properties.city,
-        street: feature.properties.street,
-        postcode: feature.properties.postcode
-      }));
-
-      setSuggestions(formattedSuggestions);
-      setShowSuggestions(true);
-    } catch (err) {
-      console.error('Error fetching suggestions:', err);
-    }
-  };
-
-  const handleLocationSearch = async (searchText: string) => {
-    setLocation(searchText);
-    setError(null);
-
-    if (searchTimeout.current) {
-      window.clearTimeout(searchTimeout.current);
-    }
-
-    searchTimeout.current = window.setTimeout(async () => {
-      if (searchText.trim().length >= 3) {
-        await fetchSuggestions(searchText);
-      } else {
-        setSuggestions([]);
+    return () => {
+      if (google.maps.event && autocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
-    }, 300);
-  };
+    };
+  }, [onLocationSelect, radius]);
 
-  const handleSuggestionSelect = async (suggestion: Suggestion) => {
-    const fullAddress = [
-      suggestion.street,
-      suggestion.city,
-      suggestion.state,
-      suggestion.postcode
-    ].filter(Boolean).join(', ');
-
-    setLocation(fullAddress);
-    setShowSuggestions(false);
-    setLoading(true);
-
-    try {
-      const coordinates = await getCoordinatesFromSearch(fullAddress);
-      if (coordinates) {
-        onLocationSelect(fullAddress, coordinates, radius);
-        setError(null);
-      } else {
-        setError('Location not found. Please enter a more specific address.');
+  const handleRadiusChange = (newRadius: number) => {
+    setRadius(newRadius);
+    if (location && autocompleteRef.current) {
+      const place = autocompleteRef.current.getPlace();
+      if (place?.geometry?.location) {
+        const coordinates = {
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng()
+        };
+        onLocationSelect(place.formatted_address || '', coordinates, newRadius);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Location search failed');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -126,43 +75,16 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
           <MapPin className="h-5 w-5 text-gray-400" />
         </div>
         <input
+          ref={inputRef}
           type="text"
           value={location}
-          onChange={(e) => handleLocationSearch(e.target.value)}
-          onFocus={() => location.trim().length >= 3 && setShowSuggestions(true)}
+          onChange={(e) => setLocation(e.target.value)}
           placeholder="Enter address, city, or ZIP code..."
           className="block w-full pl-10 pr-12 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
         />
         {loading && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <Loader className="h-5 w-5 text-gray-400 animate-spin" />
-          </div>
-        )}
-
-        {/* Suggestions dropdown */}
-        {showSuggestions && suggestions.length > 0 && (
-          <div
-            ref={suggestionsRef}
-            className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
-          >
-            {suggestions.map((suggestion, index) => {
-              const address = [
-                suggestion.street,
-                suggestion.city,
-                suggestion.state,
-                suggestion.postcode
-              ].filter(Boolean).join(', ');
-
-              return (
-                <div
-                  key={index}
-                  className="cursor-pointer hover:bg-gray-100 px-4 py-2"
-                  onClick={() => handleSuggestionSelect(suggestion)}
-                >
-                  <p className="text-sm text-gray-900">{address}</p>
-                </div>
-              );
-            })}
           </div>
         )}
       </div>
@@ -173,17 +95,7 @@ export function LocationSearch({ onLocationSelect, initialLocation = '' }: Locat
 
       <select
         value={radius}
-        onChange={(e) => {
-          const newRadius = Number(e.target.value);
-          setRadius(newRadius);
-          if (location.trim()) {
-            getCoordinatesFromSearch(location).then(coordinates => {
-              if (coordinates) {
-                onLocationSelect(location, coordinates, newRadius);
-              }
-            });
-          }
-        }}
+        onChange={(e) => handleRadiusChange(Number(e.target.value))}
         className="mt-2 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white shadow-sm"
       >
         <option value="5">Within 5 miles</option>
